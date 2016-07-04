@@ -1,6 +1,10 @@
 import Control.Monad
 import Control.Monad.Loops (untilJust)
+import System.Environment (getEnv)
+import System.Exit (exitSuccess)
 import System.IO
+import System.IO.Temp (withSystemTempFile)
+import System.Process (callProcess)
 
 import DiffParser
 import Prompt
@@ -20,10 +24,10 @@ main = do
 resolve :: DiffSection -> IO [String]
 resolve (HText s) = return s
 resolve hunk@(HConflict _ _) = do
-    displayHunk hunk
-    displayPrompt
-    cmd <- untilJust (getChar >>= return . parsePromptOption)
-    return $ resolveHunk hunk cmd
+        displayHunk hunk
+        displayPrompt
+        cmd <- untilJust (getChar >>= return . parsePromptOption)
+        resolveHunk cmd hunk
 
 displayHunk :: DiffSection -> IO ()
 displayHunk (HConflict local remote) = let
@@ -41,7 +45,24 @@ displayHunk (HConflict local remote) = let
 
         return ()
 
-resolveHunk :: DiffSection -> PromptOption -> [String]
-resolveHunk hunk cmd = error ""
--- TODO
+resolveHunk :: PromptOption -> DiffSection -> IO [String]
+resolveHunk PLeft (HConflict hunk _) = return $ contents hunk
+resolveHunk PRight (HConflict _ hunk) = return $ contents hunk
+resolveHunk PUnion (HConflict h1 h2) = return $ contents h1 ++ contents h2
+resolveHunk PZap (HConflict h1 h2) = return []
+resolveHunk PQuit _ = exitSuccess
+resolveHunk PHelp h = displayPromptHelp >> resolve h
+resolveHunk PNext (HConflict h1 h2) = return $ reconstructConflict h1 h2
+resolveHunk PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
+
+editHunk :: DiffSection -> FilePath -> Handle -> IO [String]
+editHunk (HConflict h1 h2) tmpfile h = do
+    hPutStr h . unlines $ reconstructConflict h1 h2
+    hClose h
+
+    --TODO: if subprocess fails, allow graceful recovery instead of crash
+    editor:args <- liftM words . getEnv $ "EDITOR"
+    callProcess editor (args ++ [tmpfile])
+
+    (return . lines) =<< readFile tmpfile
 

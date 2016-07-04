@@ -1,4 +1,4 @@
-module DiffParser (parseText, DiffSection(..), Hunk(..)) where
+module DiffParser (parseText, reconstructConflict, DiffSection(..), Hunk(..)) where
 
 import Data.List
 
@@ -6,11 +6,17 @@ import Data.List
 data DiffSection = HText [String]
                     | HConflict Hunk Hunk       --local, remote
                     deriving Show
+
 data Hunk = Hunk {
     name :: String,
     contents :: [String]
 } deriving Show
 
+
+conflict_start_marker, conflict_sep_marker, conflict_end_marker :: String
+conflict_start_marker = "<<<<<<< "
+conflict_sep_marker = "======="
+conflict_end_marker = ">>>>>>> "
 
 parseText :: [String] -> [DiffSection]
 parseText txt = HText startText : parseHunk hunk where
@@ -28,11 +34,15 @@ parseHunk lns =
         name2 = dropPrefix conflict_end_marker footer
     in HConflict (Hunk name1 hunk1) (Hunk name2 hunk2) : parseText rest
 
-conflict_start_marker, conflict_sep_marker, conflict_end_marker :: String
-conflict_start_marker = "<<<<<<< "
-conflict_sep_marker = "======="
-conflict_end_marker = ">>>>>>> "
-
 dropPrefix :: String -> String -> String
 dropPrefix p = drop $ length p
+
+reconstructConflict :: Hunk -> Hunk -> [String]
+reconstructConflict local remote = concat [
+        [conflict_start_marker ++ name local],
+        contents local,
+        [conflict_sep_marker],
+        contents remote,
+        [conflict_end_marker ++ name remote]
+    ]
 
