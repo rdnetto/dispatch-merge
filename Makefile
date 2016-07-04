@@ -1,5 +1,7 @@
+HFLAGS=-fPIC -dynamic -Wall
+
 all:
-	ghc --make -fPIC -dynamic Main.hs -o dispatch-merge
+	ghc --make ${HFLAGS} Main.hs -o dispatch-merge
 
 clean:
 	rm -f *.hi *.o dispatch-merge
