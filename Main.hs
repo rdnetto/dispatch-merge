@@ -1,5 +1,6 @@
 import Control.Monad
 import Control.Monad.Loops (untilJust)
+import System.Console.ANSI (clearScreen)
 import System.Environment (getEnv)
 import System.Exit (exitSuccess)
 import System.IO
@@ -24,6 +25,7 @@ main = do
 resolve :: DiffSection -> IO [String]
 resolve (HText s) = return s
 resolve hunk@(HConflict _ _) = do
+        clearScreen
         displayHunk hunk
         displayPrompt
         cmd <- untilJust (getChar >>= return . parsePromptOption)
