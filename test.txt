@@ -1,0 +1,9 @@
+The number of planets are
+<<<<<<< HEAD
+nine.
+We love pluto!
+=======
+eight.
+We hate pluto!
+>>>>>>> branch-a
+
