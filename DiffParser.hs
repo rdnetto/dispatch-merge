@@ -1,10 +1,10 @@
-module DiffParser (parseText, DiffSection) where
+module DiffParser (parseText, DiffSection(..), Hunk(..)) where
 
 import Data.List
 
 
 data DiffSection = HText [String]
-                    | HConflict Hunk Hunk
+                    | HConflict Hunk Hunk       --local, remote
                     deriving Show
 data Hunk = Hunk {
     name :: String,
