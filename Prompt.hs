@@ -21,7 +21,7 @@ displayPromptHelp = do
             "",
             "Press any key to continue..."
         ]
-    getChar
+    _ <- getChar
     return ()
 
 data PromptOption = PLeft

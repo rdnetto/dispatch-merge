@@ -51,7 +51,7 @@ resolveHunk :: PromptOption -> DiffSection -> IO [String]
 resolveHunk PLeft (HConflict hunk _) = return $ contents hunk
 resolveHunk PRight (HConflict _ hunk) = return $ contents hunk
 resolveHunk PUnion (HConflict h1 h2) = return $ contents h1 ++ contents h2
-resolveHunk PZap (HConflict h1 h2) = return []
+resolveHunk PZap (HConflict _ _) = return []
 resolveHunk PQuit _ = exitSuccess
 resolveHunk PHelp h = displayPromptHelp >> resolve h
 resolveHunk PNext (HConflict h1 h2) = return $ reconstructConflict h1 h2
