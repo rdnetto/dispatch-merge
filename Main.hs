@@ -1,4 +1,4 @@
-import Data.Algorithm.Patience
+import Data.Algorithm.Patience hiding (diff)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
 import System.Console.ANSI
@@ -62,7 +62,6 @@ resolve info hunk@(HConflict _ _) = do
 displayHunk :: DiffInfo -> DiffSection -> IO ()
 displayHunk info (HConflict local remote) = let
         border = dull_cyan "--------------------------------------------------------------------------------"
-        c2s = (:"")
     in do
         -- TODO: display line number of hunk, git-style
         -- TODO: should really show context of hunk...
@@ -74,11 +73,7 @@ displayHunk info (HConflict local remote) = let
         putStrLn border
 
         -- Show diff
-        let line_diff = lineDiff local remote
-        let word_diff = wordDiff local remote
-        let char_diff = (fmap c2s) <$> charDiff local remote
-
-        mapM_ (putStr . render_diff) char_diff
+        mapM_ (putStr . render_diff) $ diff Line local remote
 
         putStrLn border
         return ()
@@ -97,7 +92,7 @@ resolveHunk PRight (HConflict _ hunk) = return2 $ contents hunk
 resolveHunk PUnion (HConflict h1 h2) = return2 $ contents h1 ++ contents h2
 resolveHunk PZap (HConflict _ _) = return2 []
 resolveHunk PQuit _ = exitSuccess
-resolveHunk PHelp h = displayPromptHelp >> return Nothing
+resolveHunk PHelp _ = displayPromptHelp >> return Nothing
 resolveHunk PNext (HConflict h1 h2) = return2 $ reconstructConflict h1 h2
 resolveHunk PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 
