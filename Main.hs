@@ -1,11 +1,11 @@
 import Control.Monad
 import Control.Monad.Loops (untilJust)
 import System.Console.ANSI (clearScreen)
-import System.Environment (getEnv)
-import System.Exit (exitSuccess)
+import System.Environment (getArgs, getEnv)
+import System.Exit (exitSuccess, ExitCode(..))
 import System.IO
 import System.IO.Temp (withSystemTempFile)
-import System.Process (callProcess)
+import System.Process (callProcess, readProcessWithExitCode)
 
 import DiffParser
 import Prompt
@@ -17,10 +17,19 @@ main = do
     hSetBuffering stdin NoBuffering
     hSetEcho stdin False
 
+    -- Load files
+    argv <- getArgs
+    args <- firstValidM [
+                (return $ safeList argv),
+                getGitConflicts,
+                error "No files found."
+            ]
+
     -- Test with file
-    hunks <- liftM (parseText . lines) $ readFile "test.txt"
-    resolvedHunks <- mapM resolve hunks
-    putStrLn . unlines $ concat resolvedHunks
+    forM_ args $ \f -> do
+        hunks <- liftM (parseText . lines) $ readFile f
+        resolvedHunks <- mapM resolve hunks
+        putStrLn . unlines $ concat resolvedHunks
 
 resolve :: DiffSection -> IO [String]
 resolve (HText s) = return s
@@ -67,4 +76,26 @@ editHunk (HConflict h1 h2) tmpfile h = do
     callProcess editor (args ++ [tmpfile])
 
     (return . lines) =<< readFile tmpfile
+
+--TODO: recover from subprocess failure, which will happen if we're not in a git repo
+getGitConflicts :: IO (Maybe [String])
+getGitConflicts = do
+    (code, sout, _) <- readProcessWithExitCode "git" ["diff", "--name-only", "--diff-filter=U"] ""
+    return $ case code of
+        ExitSuccess -> Just $ lines sout
+        _           -> Nothing
+
+--Replaces empty list with Nothing
+safeList :: [a] -> Maybe [a]
+safeList [] = Nothing
+safeList xs = Just xs
+
+--Returns the first result that is not Nothing. Only runs actions as required; short-circuiting.
+firstValidM :: [IO (Maybe a)] -> IO a
+firstValidM (x:xs) = do
+    x' <- x
+    case x' of
+        Just a -> return a
+        Nothing -> firstValidM xs
+firstValidM [] = error "firstValidM: exhausted options"
 
