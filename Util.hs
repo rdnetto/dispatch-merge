@@ -26,3 +26,6 @@ firstValidM (x:xs) = do
         Nothing -> firstValidM xs
 firstValidM [] = error "firstValidM: exhausted options"
 
+return2 :: (Monad m1, Monad m2) => a -> m1 (m2 a)
+return2 = return . return
+

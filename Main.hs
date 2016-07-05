@@ -48,8 +48,14 @@ resolve info hunk@(HConflict _ _) = do
         clearScreen
         displayHunk info hunk
         displayPrompt info
-        cmd <- untilJust (getChar >>= return . parsePromptOption)
-        resolveHunk cmd hunk
+
+        cmd <- untilJust (return . parsePromptOption =<< getChar)
+        putStrLn ""
+
+        res <- resolveHunk cmd hunk
+        case res of
+            Just s  -> return s
+            Nothing -> resolve info hunk
 
 displayHunk :: DiffInfo -> DiffSection -> IO ()
 displayHunk info (HConflict local remote) = let
@@ -70,17 +76,18 @@ displayHunk info (HConflict local remote) = let
 
         return ()
 
-resolveHunk :: PromptOption -> DiffSection -> IO [String]
-resolveHunk PLeft (HConflict hunk _) = return $ contents hunk
-resolveHunk PRight (HConflict _ hunk) = return $ contents hunk
-resolveHunk PUnion (HConflict h1 h2) = return $ contents h1 ++ contents h2
-resolveHunk PZap (HConflict _ _) = return []
+-- Resolve a single hunk. Call again if it returns Nothing.
+resolveHunk :: PromptOption -> DiffSection -> IO (Maybe [String])
+resolveHunk PLeft (HConflict hunk _) = return2 $ contents hunk
+resolveHunk PRight (HConflict _ hunk) = return2 $ contents hunk
+resolveHunk PUnion (HConflict h1 h2) = return2 $ contents h1 ++ contents h2
+resolveHunk PZap (HConflict _ _) = return2 []
 resolveHunk PQuit _ = exitSuccess
-resolveHunk PHelp h = displayPromptHelp >> resolve undefined h
-resolveHunk PNext (HConflict h1 h2) = return $ reconstructConflict h1 h2
+resolveHunk PHelp h = displayPromptHelp >> return Nothing
+resolveHunk PNext (HConflict h1 h2) = return2 $ reconstructConflict h1 h2
 resolveHunk PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 
-editHunk :: DiffSection -> FilePath -> Handle -> IO [String]
+editHunk :: DiffSection -> FilePath -> Handle -> IO (Maybe [String])
 editHunk (HConflict h1 h2) tmpfile h = do
     hPutStr h . unlines $ reconstructConflict h1 h2
     hClose h
@@ -89,9 +96,9 @@ editHunk (HConflict h1 h2) tmpfile h = do
     editor:args <- liftM words . getEnv $ "EDITOR"
     callProcess editor (args ++ [tmpfile])
 
-    (return . lines) =<< readFile tmpfile
+    (return . Just . lines) =<< readFile tmpfile
 
---TODO: recover from subprocess failure, which will happen if we're not in a git repo
+-- Retrieves a list of files with conflicts if the working directory is in a git repo. Returns Nothing on failure.
 getGitConflicts :: IO (Maybe [FilePath])
 getGitConflicts = do
     (code, sout, _) <- readProcessWithExitCode "git" ["diff", "--name-only", "--diff-filter=U"] ""
