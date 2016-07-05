@@ -6,12 +6,14 @@ import Text.Printf
 import DiffParser
 import Util
 
+
 displayPrompt :: DiffInfo -> IO ()
 displayPrompt info =
         let msg = ">> (%i of %i) -- %s\n\
                   \>> l left, r right, u use both, z zap\n\
                   \   q quit, h help, n next, e edit: "
         in do
+            -- need to flush because of line buffering
             putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info)
             hFlush stdout
 

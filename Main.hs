@@ -53,10 +53,10 @@ resolve info hunk@(HConflict _ _) = do
 
 displayHunk :: DiffInfo -> DiffSection -> IO ()
 displayHunk info (HConflict local remote) = let
-        border = vivid_white "--------------------------------------------------------------------------------"
+        border = dull_cyan "--------------------------------------------------------------------------------"
     in do
         -- TODO: make this prettier
-        -- TODO: display line number of hunk
+        -- TODO: display line number of hunk, git-style
         -- TODO: should really show context of hunk...
         putStrLn border
         putStrLn . vivid_white $ filename info
