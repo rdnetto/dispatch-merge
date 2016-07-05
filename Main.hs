@@ -1,6 +1,7 @@
+import Data.Algorithm.Patience
 import Control.Monad
 import Control.Monad.Loops (untilJust)
-import System.Console.ANSI (clearScreen)
+import System.Console.ANSI
 import System.Environment (getArgs, getEnv)
 import System.Exit (exitSuccess, ExitCode(..))
 import System.IO
@@ -8,6 +9,7 @@ import System.IO.Temp (withSystemTempFile)
 import System.Process (callProcess, readProcessWithExitCode)
 import Text.Printf
 
+import DiffAndMerge
 import DiffParser
 import Prompt
 import Util
@@ -60,23 +62,35 @@ resolve info hunk@(HConflict _ _) = do
 displayHunk :: DiffInfo -> DiffSection -> IO ()
 displayHunk info (HConflict local remote) = let
         border = dull_cyan "--------------------------------------------------------------------------------"
+        c2s = (:"")
     in do
-        -- TODO: make this prettier
         -- TODO: display line number of hunk, git-style
         -- TODO: should really show context of hunk...
+
+        -- Header
         putStrLn border
         putStrLn . vivid_white $ filename info
         putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
         putStrLn border
-        putStr . unlines $ contents local
+
+        -- Show diff
+        let line_diff = lineDiff local remote
+        let word_diff = wordDiff local remote
+        let char_diff = (fmap c2s) <$> charDiff local remote
+
+        mapM_ (putStr . render_diff) char_diff
 
         putStrLn border
-        putStr . unlines $ contents remote
-        putStrLn border
-
         return ()
 
+-- Colorize a diff entry
+render_diff :: Item String -> String
+render_diff (Old x) = withColor Dull Red x
+render_diff (New x) = withColor Dull Green x
+render_diff (Both x _) = x
+
 -- Resolve a single hunk. Call again if it returns Nothing.
+-- TODO: should use a merge strategy consistent with the kind of diff used
 resolveHunk :: PromptOption -> DiffSection -> IO (Maybe [String])
 resolveHunk PLeft (HConflict hunk _) = return2 $ contents hunk
 resolveHunk PRight (HConflict _ hunk) = return2 $ contents hunk

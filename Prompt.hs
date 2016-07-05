@@ -21,8 +21,8 @@ displayPromptHelp :: IO ()
 displayPromptHelp = do
     mapM_ putStrLn [
             "",
-            "  l -- use local version (left)",
-            "  r -- use remote version (right)",
+            "  l -- use local version (left/red)",
+            "  r -- use remote version (right/green)",
             "  u -- use both (local first)",
             "  z -- zap (discard) both",
             "  n -- skip to the next hunk",
