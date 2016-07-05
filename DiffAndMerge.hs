@@ -1,5 +1,5 @@
 -- This module contains logic for diffing and merging hunks
-module DiffAndMerge(DiffMode(..), diff) where
+module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk) where
 
 import qualified Data.Algorithm.Patience as DAP
 import Data.Algorithm.Patience (Item)
@@ -9,6 +9,10 @@ import DiffParser
 
 
 data DiffMode = Line | Word | Char
+    deriving Show
+
+data SimpleRes = RLeft | RRight | RUnion | RZap
+    deriving Show
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
@@ -40,3 +44,10 @@ safeBreak f t = (p ++ ws) : safeBreak f s where
 
 appendNL :: String -> String
 appendNL = (++ " \n")
+
+resolveHunk :: SimpleRes -> Hunk -> Hunk -> [String]
+resolveHunk RLeft hunk _  = contents hunk
+resolveHunk RRight _ hunk = contents hunk
+resolveHunk RUnion h1 h2  = contents h1 ++ contents h2
+resolveHunk RZap _ _      = []
+

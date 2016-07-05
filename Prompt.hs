@@ -3,14 +3,25 @@ module Prompt where
 import System.IO (hFlush, stdout)
 import Text.Printf
 
+import DiffAndMerge
 import DiffParser
 import Util
+
+
+data PromptOption = PSimpleRes SimpleRes
+                    | PQuit
+                    | PHelp
+                    | PNext
+                    | PEdit
+                    | PSetDiffMode DiffMode
+                    deriving Show
 
 
 displayPrompt :: DiffInfo -> IO ()
 displayPrompt info =
         let msg = ">> (%i of %i) -- %s\n\
-                  \>> l left, r right, u use both, z zap\n\
+                  \   l left, r right, u use both, z zap\n\
+                  \   L line, W word, C char\n\
                   \   q quit, h help, n next, e edit: "
         in do
             -- need to flush because of line buffering
@@ -28,6 +39,9 @@ displayPromptHelp = do
             "  n -- skip to the next hunk",
             "  e -- edit the hunk",
             "  h -- show this screen",
+            "  L -- show line-diff",
+            "  W -- show word-diff",
+            "  C -- show char-diff",
             "  q -- quit",
             "",
             "",
@@ -36,24 +50,17 @@ displayPromptHelp = do
     _ <- getChar
     return ()
 
-data PromptOption = PLeft
-                    | PRight
-                    | PUnion
-                    | PZap
-                    | PQuit
-                    | PHelp
-                    | PNext
-                    | PEdit
-                    deriving Show
-
 parsePromptOption :: Char -> Maybe PromptOption
-parsePromptOption 'l' = Just PLeft
-parsePromptOption 'r' = Just PRight
-parsePromptOption 'u' = Just PUnion
-parsePromptOption 'z' = Just PZap
+parsePromptOption 'l' = Just $ PSimpleRes RLeft
+parsePromptOption 'r' = Just $ PSimpleRes RRight
+parsePromptOption 'u' = Just $ PSimpleRes RUnion
+parsePromptOption 'z' = Just $ PSimpleRes RZap
 parsePromptOption 'q' = Just PQuit
 parsePromptOption 'h' = Just PHelp
 parsePromptOption 'n' = Just PNext
 parsePromptOption 'e' = Just PEdit
+parsePromptOption 'W' = Just $ PSetDiffMode Word
+parsePromptOption 'L' = Just $ PSetDiffMode Line
+parsePromptOption 'C' = Just $ PSetDiffMode Char
 parsePromptOption  _  = Nothing
 
