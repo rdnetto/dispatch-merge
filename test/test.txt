@@ -1,0 +1,13 @@
+Here's some text about planets.
+<<<<<<< HEAD
+The number of planets is nine.
+=======
+The number of planets is eight.
+>>>>>>> branch-a
+We live on earth.
+<<<<<<< HEAD
+We love pluto!
+=======
+We hate pluto!
+>>>>>>> branch-a
+Astronomy is serious business.
