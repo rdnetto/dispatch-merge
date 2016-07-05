@@ -10,6 +10,7 @@ import Text.Printf
 
 import DiffParser
 import Prompt
+import Util
 
 
 main :: IO ()
@@ -41,7 +42,6 @@ main = do
         resolveHunks info i (d:ds) = (resolve (info i) d) : (resolveHunks info (i+1) ds)
         resolveHunks _ _ [] = []
 
-
 resolve :: DiffInfo -> DiffSection -> IO [String]
 resolve _ (HText s) = return s
 resolve info hunk@(HConflict _ _) = do
@@ -53,13 +53,14 @@ resolve info hunk@(HConflict _ _) = do
 
 displayHunk :: DiffInfo -> DiffSection -> IO ()
 displayHunk info (HConflict local remote) = let
-        border = "--------------------------------------------------------------------------------"
+        border = vivid_white "--------------------------------------------------------------------------------"
     in do
         -- TODO: make this prettier
         -- TODO: display line number of hunk
+        -- TODO: should really show context of hunk...
         putStrLn border
-        putStrLn $ filename info
-        putStrLn $ printf "Hunk %i of %i" (index info) (diffCount info)
+        putStrLn . vivid_white $ filename info
+        putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
         putStrLn border
         putStr . unlines $ contents local
 
@@ -97,18 +98,4 @@ getGitConflicts = do
     return $ case code of
         ExitSuccess -> Just $ lines sout
         _           -> Nothing
-
---Replaces empty list with Nothing
-safeList :: [a] -> Maybe [a]
-safeList [] = Nothing
-safeList xs = Just xs
-
---Returns the first result that is not Nothing. Only runs actions as required; short-circuiting.
-firstValidM :: [IO (Maybe a)] -> IO a
-firstValidM (x:xs) = do
-    x' <- x
-    case x' of
-        Just a -> return a
-        Nothing -> firstValidM xs
-firstValidM [] = error "firstValidM: exhausted options"
 
