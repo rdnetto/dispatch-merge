@@ -1,9 +1,15 @@
 module Prompt where
 
-displayPrompt :: IO ()
-displayPrompt = putStrLn ">> (# of #) -- $FILENAME\n\
-                         \>> l left, r right, u use both, z zap\n\
-                         \   q quit, h help, n next, e edit: "
+import DiffParser
+import Text.Printf
+
+displayPrompt :: DiffInfo -> IO ()
+displayPrompt info =
+        let msg = ">> (%i of %i) -- %s\n\
+                  \>> l left, r right, u use both, z zap\n\
+                  \   q quit, h help, n next, e edit: "
+        in putStrLn $ printf msg (index info) (diffCount info) (filename info)
+
 
 displayPromptHelp :: IO ()
 displayPromptHelp = do

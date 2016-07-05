@@ -6,6 +6,7 @@ import System.Exit (exitSuccess, ExitCode(..))
 import System.IO
 import System.IO.Temp (withSystemTempFile)
 import System.Process (callProcess, readProcessWithExitCode)
+import Text.Printf
 
 import DiffParser
 import Prompt
@@ -28,25 +29,37 @@ main = do
     -- Test with file
     forM_ args $ \f -> do
         hunks <- liftM (parseText . lines) $ readFile f
-        resolvedHunks <- mapM resolve hunks
+        let conflict_count = length $ filter isConflict hunks
+        let info i = DiffInfo f i conflict_count
+        resolvedHunks <- sequence $ resolveHunks info 1 hunks
         putStrLn . unlines $ concat resolvedHunks
 
-resolve :: DiffSection -> IO [String]
-resolve (HText s) = return s
-resolve hunk@(HConflict _ _) = do
+    where
+        -- recursive helper function for incrementing conflict index
+        resolveHunks :: (Int -> DiffInfo) -> Int -> [DiffSection] -> [IO [String]]
+        resolveHunks info i ((HText s):ds) = (return s) : (resolveHunks info i ds)
+        resolveHunks info i (d:ds) = (resolve (info i) d) : (resolveHunks info (i+1) ds)
+        resolveHunks _ _ [] = []
+
+
+resolve :: DiffInfo -> DiffSection -> IO [String]
+resolve _ (HText s) = return s
+resolve info hunk@(HConflict _ _) = do
         clearScreen
-        displayHunk hunk
-        displayPrompt
+        displayHunk info hunk
+        displayPrompt info
         cmd <- untilJust (getChar >>= return . parsePromptOption)
         resolveHunk cmd hunk
 
-displayHunk :: DiffSection -> IO ()
-displayHunk (HConflict local remote) = let
+displayHunk :: DiffInfo -> DiffSection -> IO ()
+displayHunk info (HConflict local remote) = let
         border = "--------------------------------------------------------------------------------"
     in do
         -- TODO: make this prettier
+        -- TODO: display line number of hunk
         putStrLn border
-        putStrLn "Hunk # of #"
+        putStrLn $ filename info
+        putStrLn $ printf "Hunk %i of %i" (index info) (diffCount info)
         putStrLn border
         putStr . unlines $ contents local
 
@@ -62,7 +75,7 @@ resolveHunk PRight (HConflict _ hunk) = return $ contents hunk
 resolveHunk PUnion (HConflict h1 h2) = return $ contents h1 ++ contents h2
 resolveHunk PZap (HConflict _ _) = return []
 resolveHunk PQuit _ = exitSuccess
-resolveHunk PHelp h = displayPromptHelp >> resolve h
+resolveHunk PHelp h = displayPromptHelp >> resolve undefined h
 resolveHunk PNext (HConflict h1 h2) = return $ reconstructConflict h1 h2
 resolveHunk PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 
@@ -78,7 +91,7 @@ editHunk (HConflict h1 h2) tmpfile h = do
     (return . lines) =<< readFile tmpfile
 
 --TODO: recover from subprocess failure, which will happen if we're not in a git repo
-getGitConflicts :: IO (Maybe [String])
+getGitConflicts :: IO (Maybe [FilePath])
 getGitConflicts = do
     (code, sout, _) <- readProcessWithExitCode "git" ["diff", "--name-only", "--diff-filter=U"] ""
     return $ case code of

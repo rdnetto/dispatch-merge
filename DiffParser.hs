@@ -1,4 +1,4 @@
-module DiffParser (parseText, reconstructConflict, DiffSection(..), Hunk(..)) where
+module DiffParser (DiffSection(..), DiffInfo(..), Hunk(..), parseText, reconstructConflict, isConflict) where
 
 import Data.List
 
@@ -6,6 +6,12 @@ import Data.List
 data DiffSection = HText [String]
                     | HConflict Hunk Hunk       --local, remote
                     deriving Show
+
+data DiffInfo = DiffInfo {
+    filename :: FilePath,
+    index :: Int,
+    diffCount :: Int
+}
 
 data Hunk = Hunk {
     name :: String,
@@ -45,4 +51,8 @@ reconstructConflict local remote = concat [
         contents remote,
         [conflict_end_marker ++ name remote]
     ]
+
+isConflict :: DiffSection -> Bool
+isConflict (HConflict _ _) = True
+isConflict _ = False
 
