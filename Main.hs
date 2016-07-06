@@ -1,4 +1,5 @@
 import Data.Algorithm.Patience hiding (diff)
+import Data.Maybe (fromMaybe)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
 import System.Console.ANSI
@@ -41,14 +42,15 @@ main = do
         -- recursive helper function for incrementing conflict index
         handleCmds :: (Int -> DiffInfo) -> Int -> [DiffSection] -> [IO [String]]
         handleCmds info i ((HText s):ds) = (return s) : (handleCmds info i ds)
-        handleCmds info i (d:ds) = (resolve (info i) d) : (handleCmds info (i+1) ds)
+        handleCmds info i (d:ds) = (resolve Nothing (info i) d) : (handleCmds info (i+1) ds)
         handleCmds _ _ [] = []
 
-resolve :: DiffInfo -> DiffSection -> IO [String]
-resolve _ (HText s) = return s
-resolve info hunk@(HConflict _ _) = do
+resolve :: Maybe DiffMode -> DiffInfo -> DiffSection -> IO [String]
+resolve _ _ (HText s) = return s
+resolve mode info hunk@(HConflict l r) = do
+        let mode' = fromMaybe (selectMode l r) mode
         clearScreen
-        displayHunk info hunk
+        displayHunk mode' info hunk
         displayPrompt info
 
         cmd <- untilJust (return . parsePromptOption =<< getChar)
@@ -57,10 +59,10 @@ resolve info hunk@(HConflict _ _) = do
         res <- handleCmd cmd hunk
         case res of
             Just s  -> return s
-            Nothing -> resolve info hunk
+            Nothing -> resolve (Just mode') info hunk
 
-displayHunk :: DiffInfo -> DiffSection -> IO ()
-displayHunk info (HConflict local remote) = let
+displayHunk :: DiffMode -> DiffInfo -> DiffSection -> IO ()
+displayHunk mode info (HConflict local remote) = let
         border = dull_cyan "--------------------------------------------------------------------------------"
     in do
         -- TODO: display line number of hunk, git-style
@@ -73,7 +75,7 @@ displayHunk info (HConflict local remote) = let
         putStrLn border
 
         -- Show diff
-        mapM_ (putStr . render_diff) $ diff Line local remote
+        mapM_ (putStr . render_diff) $ diff mode local remote
 
         putStrLn border
         return ()

@@ -1,9 +1,12 @@
 -- This module contains logic for diffing and merging hunks
-module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk) where
+module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk, selectMode) where
 
 import qualified Data.Algorithm.Patience as DAP
-import Data.Algorithm.Patience (Item)
-import Data.Char (isSpace)
+import Data.Algorithm.Patience (Item(..))
+import Data.Char (isSpace, isSymbol)
+import Data.Function (on)
+import Data.List (group, maximumBy)
+import Debug.Trace
 
 import DiffParser
 
@@ -28,7 +31,8 @@ lineDiff l r = DAP.diff (f l) (f r) where
 wordDiff :: Hunk -> Hunk -> [Item String]
 wordDiff l r = DAP.diff (f l) (f r) where
     f = (breakWords =<<) . (map appendNL) . contents
-    breakWords = safeBreak isSpace
+    breakWords = safeBreak sep
+    sep x = isSpace x || isSymbol x
 
 charDiff :: Hunk -> Hunk -> [Item Char]
 charDiff l r = DAP.diff (f l) (f r) where
@@ -45,9 +49,43 @@ safeBreak f t = (p ++ ws) : safeBreak f s where
 appendNL :: String -> String
 appendNL = (++ " \n")
 
+-- Performs simple, pure resolution
 resolveHunk :: SimpleRes -> Hunk -> Hunk -> [String]
 resolveHunk RLeft hunk _  = contents hunk
 resolveHunk RRight _ hunk = contents hunk
 resolveHunk RUnion h1 h2  = contents h1 ++ contents h2
 resolveHunk RZap _ _      = []
+
+-- Heuristically selects the optimal diff mode
+selectMode :: Hunk -> Hunk -> DiffMode
+selectMode l r = mode where
+    score d = diffScore $ d l r
+    scores = [
+            (Char, score charDiff),
+            (Word, score wordDiff),
+            (Line, score lineDiff)
+        ]
+    (mode, _) = maximumBy compareModes scores
+
+    compareModes :: (DiffMode, Float) -> (DiffMode, Float) -> Ordering
+    compareModes (m1, s1) (m2, s2)
+        | s1 == s2  = (compare `on` modePref) m1 m2
+        | otherwise = compare s1 s2
+        where
+            -- Map DiffMode to something which implements Ord
+            modePref Line = 0
+            modePref Word = 1
+            modePref Char = 2
+
+-- Measures the complexity of a diff, as a value between 0 and 1. Higher = simpler.
+diffScore :: [Item a] -> Float
+diffScore xs = (sum groupScores) `fdiv` normScore where
+    cs = DAP.itemChar <$> xs
+    groupScores = map norm . filter notBoth . group $ cs
+    normScore = norm . filter (/= ' ') $ cs
+
+    norm = (^2) . length
+    notBoth (' ':_) = False
+    notBoth _ = True
+    fdiv a b = (fromIntegral a) / (fromIntegral b)
 
