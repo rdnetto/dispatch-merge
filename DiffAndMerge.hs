@@ -1,11 +1,12 @@
 -- This module contains logic for diffing and merging hunks
-module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk, selectMode) where
+module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk, diffScores, selectMode) where
 
 import qualified Data.Algorithm.Patience as DAP
 import Data.Algorithm.Patience (Item(..))
 import Data.Char (isSpace, isSymbol)
 import Data.Function (on)
 import Data.List (group, maximumBy)
+import Data.Ratio
 
 import DiffParser
 
@@ -15,6 +16,8 @@ data DiffMode = Line | Word | Char
 
 data SimpleRes = RLeft | RRight | RUnion | RZap
     deriving (Show, Eq)
+
+type Score = Ratio Int
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
@@ -55,18 +58,22 @@ resolveHunk RRight _ hunk = contents hunk
 resolveHunk RUnion h1 h2  = contents h1 ++ contents h2
 resolveHunk RZap _ _      = []
 
--- Heuristically selects the optimal diff mode
-selectMode :: Hunk -> Hunk -> DiffMode
-selectMode l r = mode where
+--Scores the diffs for a pair of hunks.
+diffScores :: Hunk -> Hunk -> [(DiffMode, Score)]
+diffScores l r = scores where
     score d = diffScore $ d l r
     scores = [
             (Char, score charDiff),
             (Word, score wordDiff),
             (Line, score lineDiff)
         ]
-    (mode, _) = maximumBy compareModes scores
 
-    compareModes :: (DiffMode, Float) -> (DiffMode, Float) -> Ordering
+-- Heuristically selects the optimal diff mode
+selectMode :: Hunk -> Hunk -> DiffMode
+selectMode l r = mode where
+    (mode, _) = maximumBy compareModes $ diffScores l r
+
+    compareModes :: (DiffMode, Score) -> (DiffMode, Score) -> Ordering
     compareModes (m1, s1) (m2, s2)
         | s1 == s2  = (compare `on` modePref) m1 m2
         | otherwise = compare s1 s2
@@ -77,8 +84,8 @@ selectMode l r = mode where
             modePref Char = 2
 
 -- Measures the complexity of a diff, as a value between 0 and 1. Higher = simpler.
-diffScore :: [Item a] -> Float
-diffScore xs = (sum groupScores) `fdiv` normScore where
+diffScore :: [Item a] -> Score
+diffScore xs = (sum groupScores) % normScore where
     cs = DAP.itemChar <$> xs
     groupScores = map norm . filter notBoth . group $ cs
     normScore = norm . filter (/= ' ') $ cs
@@ -86,5 +93,4 @@ diffScore xs = (sum groupScores) `fdiv` normScore where
     norm = (^2) . length
     notBoth (' ':_) = False
     notBoth _ = True
-    fdiv a b = (fromIntegral a) / (fromIntegral b)
 

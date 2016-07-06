@@ -1,6 +1,6 @@
 Here's some text about planets.
 <<<<<<< HEAD
-The number of planets is nine.
+the number of planets is nine.
 =======
 The number of planets is eight.
 >>>>>>> branch-a

@@ -1,5 +1,5 @@
 import Data.Algorithm.Patience hiding (diff)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
 import System.Console.ANSI
@@ -78,6 +78,12 @@ displayHunk mode info (HConflict local remote) = let
         putStrLn border
         putStrLn . vivid_white $ filename info
         putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
+
+        -- TODO: IF DEBUG
+        let scores = diffScores local remote
+        let l x = show . fromJust $ lookup x scores
+        putStrLn $ printf "Heuristic: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
+
         putStrLn border
 
         -- Show diff
@@ -96,7 +102,7 @@ render_diff (Both x _) = x
 -- TODO: should use a merge strategy consistent with the kind of diff used
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
 handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk res h1 h2
-handleCmd (PSetDiffMode d) hunk = return $ TryAgain (const $ Just d) id id
+handleCmd (PSetDiffMode d) _ = return $ TryAgain (const $ Just d) id id
 handleCmd PNext (HConflict h1 h2) = return . Success $ reconstructConflict h1 h2
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
