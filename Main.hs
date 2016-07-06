@@ -16,6 +16,12 @@ import Prompt
 import Util
 
 
+-- Helper type for representing the outcome of a command. TryAgain takes mutators for each of the parameters of resolve.
+data CmdOutcome = Success [String]
+                | TryAgain (F (Maybe DiffMode)) (F DiffInfo) (F DiffSection)
+type F a = a -> a
+
+
 main :: IO ()
 main = do
     -- Configure terminal
@@ -58,8 +64,8 @@ resolve mode info hunk@(HConflict l r) = do
 
         res <- handleCmd cmd hunk
         case res of
-            Just s  -> return s
-            Nothing -> resolve (Just mode') info hunk
+            Success s  -> return s
+            TryAgain a b c -> resolve (a $ Just mode') (b info) (c hunk)
 
 displayHunk :: DiffMode -> DiffInfo -> DiffSection -> IO ()
 displayHunk mode info (HConflict local remote) = let
@@ -88,14 +94,15 @@ render_diff (Both x _) = x
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 -- TODO: should use a merge strategy consistent with the kind of diff used
-handleCmd :: PromptOption -> DiffSection -> IO (Maybe [String])
-handleCmd (PSimpleRes res) (HConflict h1 h2) = return2 $ resolveHunk res h1 h2
-handleCmd PNext (HConflict h1 h2) = return2 $ reconstructConflict h1 h2
+handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
+handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk res h1 h2
+handleCmd (PSetDiffMode d) hunk = return $ TryAgain (const $ Just d) id id
+handleCmd PNext (HConflict h1 h2) = return . Success $ reconstructConflict h1 h2
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
-handleCmd PHelp _ = displayPromptHelp >> return Nothing
+handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
 handleCmd PQuit _ = exitSuccess
 
-editHunk :: DiffSection -> FilePath -> Handle -> IO (Maybe [String])
+editHunk :: DiffSection -> FilePath -> Handle -> IO CmdOutcome
 editHunk (HConflict h1 h2) tmpfile h = do
     hPutStr h . unlines $ reconstructConflict h1 h2
     hClose h
@@ -104,7 +111,7 @@ editHunk (HConflict h1 h2) tmpfile h = do
     editor:args <- liftM words . getEnv $ "EDITOR"
     callProcess editor (args ++ [tmpfile])
 
-    (return . Just . lines) =<< readFile tmpfile
+    (return . Success . lines) =<< readFile tmpfile
 
 -- Retrieves a list of files with conflicts if the working directory is in a git repo. Returns Nothing on failure.
 getGitConflicts :: IO (Maybe [FilePath])
