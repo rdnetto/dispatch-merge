@@ -6,7 +6,6 @@ import Data.Algorithm.Patience (Item(..))
 import Data.Char (isSpace, isSymbol)
 import Data.Function (on)
 import Data.List (group, maximumBy)
-import Debug.Trace
 
 import DiffParser
 
@@ -38,11 +37,11 @@ charDiff :: Hunk -> Hunk -> [Item Char]
 charDiff l r = DAP.diff (f l) (f r) where
     f = (id =<<) . (map appendNL) . contents
 
--- Like words/lines/etc., but doesn't discard the boundary text.
+-- Like words/lines/etc., but includes the boundary text as a separate element.
 -- Designed to be used with isSpace, etc.
 safeBreak :: (Char -> Bool) -> String -> [String]
 safeBreak _ [] = []
-safeBreak f t = (p ++ ws) : safeBreak f s where
+safeBreak f t = p : ws : safeBreak f s where
     (p, x) = break f t
     (ws, s) = span f x
 
