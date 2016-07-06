@@ -5,18 +5,18 @@ import Data.List
 
 data DiffSection = HText [String]
                     | HConflict Hunk Hunk       --local, remote
-                    deriving Show
+                    deriving (Show, Eq)
 
 data DiffInfo = DiffInfo {
     filename :: FilePath,
     index :: Int,
     diffCount :: Int
-}
+} deriving (Show, Eq)
 
 data Hunk = Hunk {
     name :: String,
     contents :: [String]
-} deriving Show
+} deriving (Show, Eq)
 
 
 conflict_start_marker, conflict_sep_marker, conflict_end_marker :: String

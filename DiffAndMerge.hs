@@ -11,10 +11,10 @@ import DiffParser
 
 
 data DiffMode = Line | Word | Char
-    deriving Show
+    deriving (Show, Eq)
 
 data SimpleRes = RLeft | RRight | RUnion | RZap
-    deriving Show
+    deriving (Show, Eq)
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
