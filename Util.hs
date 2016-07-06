@@ -18,7 +18,7 @@ safeList [] = Nothing
 safeList xs = Just xs
 
 --Returns the first result that is not Nothing. Only runs actions as required; short-circuiting.
-firstValidM :: [IO (Maybe a)] -> IO a
+firstValidM :: Monad m => [m (Maybe a)] -> m a
 firstValidM (x:xs) = do
     x' <- x
     case x' of
