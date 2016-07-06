@@ -1,10 +1,10 @@
 HFLAGS=-fPIC -dynamic -Wall
 
 dispatch-merge: *.hs
-	ghc --make ${HFLAGS} Main.hs -o dispatch-merge
+	ghc --make ${HFLAGS} Main.hs -o dispatch-merge -odir build -hidir build
 
 clean:
-	rm -f *.hi *.o dispatch-merge
+	rm -f dispatch-merge build/*
 
 test: dispatch-merge
 	./dispatch-merge test/test.txt
