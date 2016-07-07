@@ -42,19 +42,29 @@ main = do
         hunks <- liftM (parseText . lines) $ readFile f
         let conflict_count = length $ filter isConflict hunks
         let info i = DiffInfo f i conflict_count
-        resolvedHunks <- sequence $ handleCmds info 1 hunks
+        resolvedHunks <- resolveHunks info 1 [] hunks
         putStrLn . unlines $ concat resolvedHunks
 
-    where
-        -- recursive helper function for incrementing conflict index
-        handleCmds :: (Int -> DiffInfo) -> Int -> [DiffSection] -> [IO [String]]
-        handleCmds info i ((HText s):ds) = (return s) : (handleCmds info i ds)
-        handleCmds info i (d:ds) = (resolve Nothing (info i) d) : (handleCmds info (i+1) ds)
-        handleCmds _ _ [] = []
+-- Recursive helper function for maintaining state while iterating over hunks.
+-- info - constructs a DiffInfo with the specified index
+-- i - the index of the current conflict
+-- prev - the (resolved) previous hunk, if any
+-- d:ds - the list of hunks
+resolveHunks :: (Int -> DiffInfo) -> Int -> [String] -> [DiffSection] -> IO [[String]]
+resolveHunks info i _ ((HText s):ds) = return . (s:) =<< (resolveHunks info i s ds)
+resolveHunks info i prev (d0:ds) = do
+    let d1 = case ds of
+               dx:_ -> diffStr dx
+               []   -> []
 
-resolve :: Maybe DiffMode -> DiffInfo -> DiffSection -> IO [String]
-resolve _ _ (HText s) = return s
-resolve mode info hunk@(HConflict l r) = do
+    res  <- resolve Nothing (info i) prev d0 d1
+    rest <- resolveHunks info (i+1) res ds
+    return $ res : rest
+resolveHunks _ _ _ [] = return []
+
+resolve :: Maybe DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO [String]
+resolve _ _ _ (HText s) _ = return s
+resolve mode info prev hunk@(HConflict l r) after = do
         let mode' = fromMaybe (selectMode l r) mode
         clearScreen
         displayHunk mode' info hunk
@@ -66,7 +76,7 @@ resolve mode info hunk@(HConflict l r) = do
         res <- handleCmd cmd hunk
         case res of
             Success s  -> return s
-            TryAgain a b c -> resolve (a $ Just mode') (b info) (c hunk)
+            TryAgain a b c -> resolve (a $ Just mode') (b info) prev (c hunk) after
 
 displayHunk :: DiffMode -> DiffInfo -> DiffSection -> IO ()
 displayHunk mode info (HConflict local remote) = let
