@@ -50,6 +50,8 @@ main = do
         -- TODO: only git add file if we didn't skip any sections
         when useGit $ gitAdd f
 
+    -- TODO: display a list of modified files on quit
+
 -- Recursive helper function for maintaining state while iterating over hunks.
 -- info - constructs a DiffInfo with the specified index
 -- i - the index of the current conflict

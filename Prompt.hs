@@ -20,7 +20,7 @@ data PromptOption = PSimpleRes SimpleRes
 displayPrompt :: DiffInfo -> IO ()
 displayPrompt info =
         let msg = ">> (%i of %i) -- %s\n\
-                  \   L left, R right, U use both, Z zap\n\
+                  \   L local, R remote, U use both, Z zap\n\
                   \   I line, W word, C char\n\
                   \   Q quit, H help, N next, E edit: "
         in do
@@ -32,8 +32,8 @@ displayPromptHelp :: IO ()
 displayPromptHelp = do
     mapM_ putStrLn [
             "",
-            "  L -- use local version (left/red)",
-            "  R -- use remote version (right/green)",
+            "  L -- use local version (red)",
+            "  R -- use remote version (green)",
             "  U -- use both (local first)",
             "  Z -- zap (discard) both",
             "  N -- skip to the next hunk",
