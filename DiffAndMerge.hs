@@ -23,22 +23,25 @@ type Score = Ratio Int
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
 diff Line l r = lineDiff l r
 diff Word l r = wordDiff l r
-diff Char l r = (fmap c2s) <$> charDiff l r where
-    c2s = (:"")
+diff Char l r = sCharDiff l r
 
 lineDiff :: Hunk -> Hunk -> [Item String]
 lineDiff l r = DAP.diff (f l) (f r) where
-    f = (map appendNL) . contents
+    f = map appendNL . contents
 
 wordDiff :: Hunk -> Hunk -> [Item String]
 wordDiff l r = DAP.diff (f l) (f r) where
-    f = (breakWords =<<) . (map appendNL) . contents
+    f = (breakWords =<<) . map appendNL . contents
     breakWords = safeBreak sep
     sep x = isSpace x || isSymbol x
 
 charDiff :: Hunk -> Hunk -> [Item Char]
 charDiff l r = DAP.diff (f l) (f r) where
-    f = (id =<<) . (map appendNL) . contents
+    f = (id =<<) . map appendNL . contents
+
+sCharDiff :: Hunk -> Hunk -> [Item String]
+sCharDiff l r = fmap c2s <$> charDiff l r where
+    c2s = (:"")
 
 -- Like words/lines/etc., but includes the boundary text as a separate element.
 -- Designed to be used with isSpace, etc.
