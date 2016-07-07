@@ -2,11 +2,9 @@
 module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk, diffScores, selectMode) where
 
 import qualified Data.Algorithm.Patience as DAP
-import Data.Algorithm.Patience (Item(..))
+import Data.Algorithm.Patience hiding (diff)
 import Data.Char (isSpace, isSymbol)
-import Data.Function (on)
-import Data.List (group, maximumBy)
-import Data.Ratio
+import Data.Monoid
 
 import DiffParser
 
@@ -17,7 +15,7 @@ data DiffMode = Line | Word | Char
 data SimpleRes = RLeft | RRight | RUnion | RZap
     deriving (Show, Eq)
 
-type Score = Ratio Int
+type Score = Int
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
@@ -66,7 +64,7 @@ diffScores :: Hunk -> Hunk -> [(DiffMode, Score)]
 diffScores l r = scores where
     score d = diffScore $ d l r
     scores = [
-            (Char, score charDiff),
+            (Char, score sCharDiff),
             (Word, score wordDiff),
             (Line, score lineDiff)
         ]
@@ -74,26 +72,35 @@ diffScores l r = scores where
 -- Heuristically selects the optimal diff mode
 selectMode :: Hunk -> Hunk -> DiffMode
 selectMode l r = mode where
-    (mode, _) = maximumBy compareModes $ diffScores l r
+    -- if a mode has a score higher than threshold, select the next one
+    threshold = 4
+    thresholdCrit = (<= threshold) . snd
+    candidates = filter thresholdCrit $ diffScores l r
+    mode = case candidates of
+            m:_ -> fst m
+            []  -> Line
 
-    compareModes :: (DiffMode, Score) -> (DiffMode, Score) -> Ordering
-    compareModes (m1, s1) (m2, s2)
-        | s1 == s2  = (compare `on` modePref) m1 m2
-        | otherwise = compare s1 s2
-        where
-            -- Map DiffMode to something which implements Ord
-            modePref Line = 0
-            modePref Word = 1
-            modePref Char = 2
+-- Measures the complexity of a diff, in terms of the no. of changes. Higher = more complex.
+diffScore :: [Item String] -> Score
+diffScore xs = score where
+    xs' = coalesce xs
+    score = filtLength isOld + filtLength isNew
+    filtLength f = length $ filter f xs'
 
--- Measures the complexity of a diff, as a value between 0 and 1. Higher = simpler.
-diffScore :: [Item a] -> Score
-diffScore xs = (sum groupScores) % normScore where
-    cs = DAP.itemChar <$> xs
-    groupScores = map norm . filter notBoth . group $ cs
-    normScore = norm . filter (/= ' ') $ cs
+    isOld (Old _) = True
+    isOld _ = False
 
-    norm = (^2) . length
-    notBoth (' ':_) = False
-    notBoth _ = True
+    isNew (New _) = True
+    isNew _ = False
+
+-- Combines multiple adjacent Old/New/Both entries into single ones. Ensures that there are no adjacent entries of the same case.
+coalesce :: Monoid a => [Item a] -> [Item a]
+coalesce (a1:a2:as)
+    | itemChar a1 == itemChar a2 = coalesce $ fuse a1 a2 : as
+    | otherwise                  = a1 : coalesce (a2:as)
+    where
+        fuse (Old x) (Old y) = Old (x <> y)
+        fuse (New x) (New y) = New (x <> y)
+        fuse (Both x1 x2) (Both y1 y2) = Both (x1 <> y1) (x2 <> y2)
+coalesce x = x
 
