@@ -15,11 +15,13 @@ import DiffParser
 import Git
 import Prompt
 import Util
+import Debug.Trace
 
 
 -- Helper type for representing the outcome of a command. TryAgain takes mutators for each of the parameters of resolve.
 data CmdOutcome = Success [String]
                 | TryAgain (F (Maybe DiffMode)) (F DiffInfo) (F DiffSection)
+                | Skipped
 type F a = a -> a
 
 
@@ -44,11 +46,15 @@ main = do
         hunks <- liftM (parseText . lines) $ readFile f
         let conflict_count = length $ filter isConflict hunks
         let info i = DiffInfo f i conflict_count
-        resolvedHunks <- resolveHunks info 1 [] hunks
+
+        resolutions <- resolveHunks info 1 [] hunks
+        let complete = trace (show $ fst <$> resolutions) (and $ fst <$> resolutions)
+        let resolvedHunks = snd <$> resolutions
+
         writeFile f . unlines $ concat resolvedHunks
 
-        -- TODO: only git add file if we didn't skip any sections
-        when useGit $ gitAdd f
+        -- only git-add file if we didn't skip any sections
+        when (useGit && complete) $ gitAdd f
 
     -- TODO: display a list of modified files on quit
 
@@ -57,20 +63,21 @@ main = do
 -- i - the index of the current conflict
 -- prev - the (resolved) previous hunk, if any
 -- d:ds - the list of hunks
-resolveHunks :: (Int -> DiffInfo) -> Int -> [String] -> [DiffSection] -> IO [[String]]
-resolveHunks info i _ ((HText s):ds) = return . (s:) =<< (resolveHunks info i s ds)
+-- Returns - list of resolved sections. Bool is True if the section no longer contains conflicts.
+resolveHunks :: (Int -> DiffInfo) -> Int -> [String] -> [DiffSection] -> IO [(Bool, [String])]
+resolveHunks info i _ ((HText s):ds) = return . ((True, s):) =<< (resolveHunks info i s ds)
 resolveHunks info i prev (d0:ds) = do
     let d1 = case ds of
                dx:_ -> diffStr dx
                []   -> []
 
-    res  <- resolve Nothing (info i) prev d0 d1
+    (complete, res) <- resolve Nothing (info i) prev d0 d1
     rest <- resolveHunks info (i+1) res ds
-    return $ res : rest
-resolveHunks _ _ _ [] = return []
+    return $ (complete, res) : rest
+resolveHunks _ _ _ [] = return $ return (True, [])
 
-resolve :: Maybe DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO [String]
-resolve _ _ _ (HText s) _ = return s
+resolve :: Maybe DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO (Bool, [String])
+resolve _ _ _ (HText s) _ = return (True, s)
 resolve mode info prev hunk@(HConflict l r) after = do
         -- TODO: this should be user configurable
         let contextSize = 3
@@ -84,8 +91,9 @@ resolve mode info prev hunk@(HConflict l r) after = do
 
         res <- handleCmd cmd hunk
         case res of
-            Success s  -> return s
+            Success s -> return (True, s)
             TryAgain a b c -> resolve (a $ Just mode') (b info) prev (c hunk) after
+            Skipped -> return (False, diffStr hunk)
 
 displayHunk :: DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO ()
 displayHunk mode info prev (HConflict local remote) after = let
@@ -124,12 +132,10 @@ renderDiff (New x) = withColor Dull Green x
 renderDiff (Both x _) = x
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
--- TODO: should use a merge strategy consistent with the kind of diff used
--- TODO: PSkip should not result in file being added to index
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
 handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk res h1 h2
 handleCmd (PSetDiffMode d) _ = return $ TryAgain (const $ Just d) id id
-handleCmd PSkip d = return . Success $ diffStr d
+handleCmd PSkip _ = return Skipped
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
 handleCmd PQuit _ = exitSuccess
