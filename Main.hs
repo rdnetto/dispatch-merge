@@ -8,11 +8,11 @@ import System.Environment (getArgs, getEnv)
 import System.Exit (exitSuccess, ExitCode(..))
 import System.IO
 import System.IO.Temp (withSystemTempFile)
-import System.Process (readProcessWithExitCode)
 import Text.Printf
 
 import DiffAndMerge
 import DiffParser
+import Git
 import Prompt
 import Util
 
@@ -138,18 +138,4 @@ editHunk d tmpfile h = do
     case exitCode of
         ExitSuccess -> (return . Success . lines) =<< readFile tmpfile
         _           -> return $ TryAgain id id id
-
--- Retrieves a list of files with conflicts if the working directory is in a git repo. Returns Nothing on failure.
-getGitConflicts :: IO (Maybe [FilePath])
-getGitConflicts = do
-    (code, sout, _) <- readProcessWithExitCode "git" ["diff", "--name-only", "--diff-filter=U"] ""
-    return $ case code of
-        ExitSuccess -> Just $ lines sout
-        _           -> Nothing
-
--- Like callProcess, but doesn't throw an exception on failure.
-callProcessWithExitCode :: FilePath -> [String] -> IO ExitCode
-callProcessWithExitCode path args = do
-    (code, _, _) <- readProcessWithExitCode path args ""
-    return code
 

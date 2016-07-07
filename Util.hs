@@ -1,6 +1,8 @@
 module Util where
 
 import System.Console.ANSI
+import System.Exit (ExitCode)
+import System.Process (readProcessWithExitCode)
 
 
 -- Helper methods for colours
@@ -29,4 +31,10 @@ firstValidM [] = error "firstValidM: exhausted options"
 -- Returns the last N items from the list, or the list itself if it is less than N items long.
 lastN :: Int -> [a] -> [a]
 lastN n xs = drop (length xs - n) xs
+
+-- Like callProcess, but doesn't throw an exception on failure.
+callProcessWithExitCode :: FilePath -> [String] -> IO ExitCode
+callProcessWithExitCode path args = do
+    (code, _, _) <- readProcessWithExitCode path args ""
+    return code
 
