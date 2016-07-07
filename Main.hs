@@ -82,7 +82,7 @@ displayHunk mode info (HConflict local remote) = let
         -- TODO: IF DEBUG
         let scores = diffScores local remote
         let l x = show . fromJust $ lookup x scores
-        putStrLn $ printf "Heuristic: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
+        putStrLn $ printf "Changes: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
 
         let lStart = lineNo local
         let rStart = lineNo remote
