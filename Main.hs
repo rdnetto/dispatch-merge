@@ -110,14 +110,14 @@ renderDiff (Both x _) = x
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
 handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk res h1 h2
 handleCmd (PSetDiffMode d) _ = return $ TryAgain (const $ Just d) id id
-handleCmd PSkip (HConflict h1 h2) = return . Success $ reconstructConflict h1 h2
+handleCmd PSkip d = return . Success $ diffStr d
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
 handleCmd PQuit _ = exitSuccess
 
 editHunk :: DiffSection -> FilePath -> Handle -> IO CmdOutcome
-editHunk (HConflict h1 h2) tmpfile h = do
-    hPutStr h . unlines $ reconstructConflict h1 h2
+editHunk d tmpfile h = do
+    hPutStr h . unlines $ diffStr d
     hClose h
 
     editor:args <- liftM words . getEnv $ "EDITOR"

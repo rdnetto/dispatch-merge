@@ -1,4 +1,4 @@
-module DiffParser (DiffSection(..), DiffInfo(..), Hunk(..), parseText, reconstructConflict, isConflict) where
+module DiffParser (DiffSection(..), DiffInfo(..), Hunk(..), parseText, diffStr, isConflict) where
 
 import Data.List
 
@@ -36,6 +36,17 @@ parseTextInternal (lLn, rLn) txt = HText startText : parseHunk (lLn', rLn') hunk
     lLn' = lLn + length startText
     rLn' = rLn + length startText
 
+-- Converts a diff back to its string representation
+diffStr :: DiffSection -> [String]
+diffStr (HText s) = s
+diffStr (HConflict local remote) = concat [
+        [conflict_start_marker ++ name local],
+        contents local,
+        [conflict_sep_marker],
+        contents remote,
+        [conflict_end_marker ++ name remote]
+    ]
+
 -- Parses a merge conflict.
 -- (lLn, rLn) - line nos. of the hunk in local and remote files
 -- lns - content of the hunk
@@ -56,15 +67,6 @@ parseHunk (lLn, rLn) lns =
 
 dropPrefix :: String -> String -> String
 dropPrefix p = drop $ length p
-
-reconstructConflict :: Hunk -> Hunk -> [String]
-reconstructConflict local remote = concat [
-        [conflict_start_marker ++ name local],
-        contents local,
-        [conflict_sep_marker],
-        contents remote,
-        [conflict_end_marker ++ name remote]
-    ]
 
 isConflict :: DiffSection -> Bool
 isConflict (HConflict _ _) = True
