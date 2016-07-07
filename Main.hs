@@ -72,7 +72,6 @@ displayHunk :: DiffMode -> DiffInfo -> DiffSection -> IO ()
 displayHunk mode info (HConflict local remote) = let
         border = dull_cyan "--------------------------------------------------------------------------------"
     in do
-        -- TODO: display line number of hunk, git-style
         -- TODO: should really show context of hunk...
 
         -- Header
@@ -85,7 +84,13 @@ displayHunk mode info (HConflict local remote) = let
         let l x = show . fromJust $ lookup x scores
         putStrLn $ printf "Heuristic: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
 
+        -- TODO: display line numbers of hunk, git-style
+        let lStart = 0 ::Int
+        let rStart = 0 ::Int
+        let lCount = length $ contents local
+        let rCount = length $ contents remote
         putStrLn border
+        putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
         -- Show diff
         mapM_ (putStr . renderDiff) $ diff mode local remote
