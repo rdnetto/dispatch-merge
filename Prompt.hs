@@ -11,7 +11,7 @@ import Util
 data PromptOption = PSimpleRes SimpleRes
                     | PQuit
                     | PHelp
-                    | PNext
+                    | PSkip
                     | PEdit
                     | PSetDiffMode DiffMode
                     deriving Show
@@ -58,7 +58,7 @@ parsePromptOption 'Z' = Just $ PSimpleRes RZap
 parsePromptOption 'Q' = Just PQuit
 parsePromptOption '\EOT' = Just PQuit   -- Ctrl+D
 parsePromptOption 'H' = Just PHelp
-parsePromptOption 'S' = Just PNext
+parsePromptOption 'S' = Just PSkip
 parsePromptOption 'E' = Just PEdit
 parsePromptOption 'W' = Just $ PSetDiffMode Word
 parsePromptOption 'N' = Just $ PSetDiffMode Line

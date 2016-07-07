@@ -101,10 +101,11 @@ renderDiff (Both x _) = x
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 -- TODO: should use a merge strategy consistent with the kind of diff used
+-- TODO: PSkip should not result in file being added to index
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
 handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk res h1 h2
 handleCmd (PSetDiffMode d) _ = return $ TryAgain (const $ Just d) id id
-handleCmd PNext (HConflict h1 h2) = return . Success $ reconstructConflict h1 h2
+handleCmd PSkip (HConflict h1 h2) = return . Success $ reconstructConflict h1 h2
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
 handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
 handleCmd PQuit _ = exitSuccess
