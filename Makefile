@@ -1,4 +1,4 @@
-HFLAGS=-fPIC -dynamic -Wall
+HFLAGS=-fPIC -dynamic -Wall -XTupleSections
 
 dispatch-merge: *.hs
 	ghc --make ${HFLAGS} Main.hs -o dispatch-merge -odir build -hidir build

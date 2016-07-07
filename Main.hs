@@ -31,19 +31,23 @@ main = do
 
     -- Load files
     argv <- getArgs
-    args <- firstValidM [
-                return $ safeList argv,
-                getGitConflicts,
+    (useGit, args) <- firstValidM [
+                -- TODO: this would probably be much clearer with a monad transformer
+                return $ (False,) <$> safeList argv,
+                fmap (True,) <$> getGitConflicts,
                 error "No files found."
             ]
 
-    -- Test with file
+    -- Resolve conflicts for each file
     forM_ args $ \f -> do
         hunks <- liftM (parseText . lines) $ readFile f
         let conflict_count = length $ filter isConflict hunks
         let info i = DiffInfo f i conflict_count
         resolvedHunks <- resolveHunks info 1 [] hunks
-        putStrLn . unlines $ concat resolvedHunks
+        writeFile f . unlines $ concat resolvedHunks
+
+        -- TODO: only git add file if we didn't skip any sections
+        when useGit $ gitAdd f
 
 -- Recursive helper function for maintaining state while iterating over hunks.
 -- info - constructs a DiffInfo with the specified index
