@@ -1,6 +1,7 @@
 module Util where
 
-import Control.Monad (replicateM_)
+import Control.Monad (replicateM_, void)
+import Control.Monad.Loops (firstM)
 import System.Console.ANSI
 import System.Console.Terminal.Size (size, height)
 import System.Exit (ExitCode)
@@ -49,3 +50,10 @@ callProcessWithExitCode path args = do
     (code, _, _) <- readProcessWithExitCode path args ""
     return code
 
+-- Emulate for-each loop with early termination (break) using firstM.
+breakableForM_ :: Monad m => [a] -> (a -> m Bool) -> m ()
+breakableForM_ xs f = void $ firstM f xs
+
+-- Syntactic sugar for breakableForM_.
+breakOn :: Monad m => Bool -> m Bool
+breakOn = return
