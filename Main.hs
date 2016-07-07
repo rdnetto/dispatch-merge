@@ -30,6 +30,7 @@ data Resolution = Resolved [String]
                 | Terminated
 
 
+-- TODO: fix build system
 main :: IO ()
 main = do
     -- Configure terminal - configure stdin for reading individual keys, and move cursor to the bottom of stdout.
@@ -47,6 +48,7 @@ main = do
             ]
 
     -- Resolve conflicts for each file
+    -- TODO: need to handle deleted files correctly (and test what happens when deletion is on both sides of the merge)
     results <- breakableForM args $ \f -> do
         hunks <- liftM (parseText . lines) $ readFile f
         let conflict_count = length $ filter isConflict hunks
