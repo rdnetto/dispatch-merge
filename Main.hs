@@ -1,4 +1,5 @@
 import Data.Algorithm.Patience hiding (diff)
+import Data.Char (toUpper)
 import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
@@ -59,7 +60,7 @@ resolve mode info hunk@(HConflict l r) = do
         displayHunk mode' info hunk
         displayPrompt info
 
-        cmd <- untilJust (return . parsePromptOption =<< getChar)
+        cmd <- untilJust (return . parsePromptOption . toUpper =<< getChar)
         putStrLn ""
 
         res <- handleCmd cmd hunk

@@ -20,9 +20,9 @@ data PromptOption = PSimpleRes SimpleRes
 displayPrompt :: DiffInfo -> IO ()
 displayPrompt info =
         let msg = ">> (%i of %i) -- %s\n\
-                  \   l left, r right, u use both, z zap\n\
-                  \   L line, W word, C char\n\
-                  \   q quit, h help, n next, e edit: "
+                  \   L left, R right, U use both, Z zap\n\
+                  \   N line, W word, C char\n\
+                  \   Q quit, H help, S skip, E edit: "
         in do
             -- need to flush because of line buffering
             putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info)
@@ -32,17 +32,17 @@ displayPromptHelp :: IO ()
 displayPromptHelp = do
     mapM_ putStrLn [
             "",
-            "  l -- use local version (left/red)",
-            "  r -- use remote version (right/green)",
-            "  u -- use both (local first)",
-            "  z -- zap (discard) both",
-            "  n -- skip to the next hunk",
-            "  e -- edit the hunk",
-            "  h -- show this screen",
-            "  L -- show line-diff",
+            "  L -- use local version (left/red)",
+            "  R -- use remote version (right/green)",
+            "  U -- use both (local first)",
+            "  Z -- zap (discard) both",
+            "  S -- skip to the next hunk",
+            "  E -- edit the hunk",
+            "  H -- show this screen",
+            "  N -- show line-diff",
             "  W -- show word-diff",
             "  C -- show char-diff",
-            "  q -- quit",
+            "  Q -- quit",
             "",
             "",
             "Press any key to continue..."
@@ -51,16 +51,17 @@ displayPromptHelp = do
     return ()
 
 parsePromptOption :: Char -> Maybe PromptOption
-parsePromptOption 'l' = Just $ PSimpleRes RLeft
-parsePromptOption 'r' = Just $ PSimpleRes RRight
-parsePromptOption 'u' = Just $ PSimpleRes RUnion
-parsePromptOption 'z' = Just $ PSimpleRes RZap
-parsePromptOption 'q' = Just PQuit
-parsePromptOption 'h' = Just PHelp
-parsePromptOption 'n' = Just PNext
-parsePromptOption 'e' = Just PEdit
+parsePromptOption 'L' = Just $ PSimpleRes RLeft
+parsePromptOption 'R' = Just $ PSimpleRes RRight
+parsePromptOption 'U' = Just $ PSimpleRes RUnion
+parsePromptOption 'Z' = Just $ PSimpleRes RZap
+parsePromptOption 'Q' = Just PQuit
+parsePromptOption '\EOT' = Just PQuit   -- Ctrl+D
+parsePromptOption 'H' = Just PHelp
+parsePromptOption 'S' = Just PNext
+parsePromptOption 'E' = Just PEdit
 parsePromptOption 'W' = Just $ PSetDiffMode Word
-parsePromptOption 'L' = Just $ PSetDiffMode Line
+parsePromptOption 'N' = Just $ PSetDiffMode Line
 parsePromptOption 'C' = Just $ PSetDiffMode Char
 parsePromptOption  _  = Nothing
 
