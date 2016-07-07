@@ -25,9 +25,10 @@ type F a = a -> a
 
 main :: IO ()
 main = do
-    -- Configure terminal
+    -- Configure terminal - configure stdin for reading individual keys, and move cursor to the bottom of stdout.
     hSetBuffering stdin NoBuffering
     hSetEcho stdin False
+    flushTerminal
 
     -- Load files
     argv <- getArgs

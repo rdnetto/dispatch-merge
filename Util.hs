@@ -1,6 +1,8 @@
 module Util where
 
+import Control.Monad (replicateM_)
 import System.Console.ANSI
+import System.Console.Terminal.Size (size, height)
 import System.Exit (ExitCode)
 import System.Process (readProcessWithExitCode)
 
@@ -31,6 +33,15 @@ firstValidM [] = error "firstValidM: exhausted options"
 -- Returns the last N items from the list, or the list itself if it is less than N items long.
 lastN :: Int -> [a] -> [a]
 lastN n xs = drop (length xs - n) xs
+
+-- Print enough blank lines to clear the terminal.
+-- Unlike System.Console.ANSI.clearScreen, it ensures that the cursor is at the bottom of the screen, for consistent output.
+flushTerminal :: IO ()
+flushTerminal = do
+    s <- size
+    case s of
+        Just s' -> replicateM_ (height s') (putStrLn "")
+        Nothing -> return ()
 
 -- Like callProcess, but doesn't throw an exception on failure.
 callProcessWithExitCode :: FilePath -> [String] -> IO ExitCode
