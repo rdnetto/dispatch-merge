@@ -84,9 +84,8 @@ displayHunk mode info (HConflict local remote) = let
         let l x = show . fromJust $ lookup x scores
         putStrLn $ printf "Heuristic: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
 
-        -- TODO: display line numbers of hunk, git-style
-        let lStart = 0 ::Int
-        let rStart = 0 ::Int
+        let lStart = lineNo local
+        let rStart = lineNo remote
         let lCount = length $ contents local
         let rCount = length $ contents remote
         putStrLn border

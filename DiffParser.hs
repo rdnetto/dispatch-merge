@@ -15,7 +15,8 @@ data DiffInfo = DiffInfo {
 
 data Hunk = Hunk {
     name :: String,
-    contents :: [String]
+    contents :: [String],
+    lineNo :: Int
 } deriving (Show, Eq)
 
 
@@ -24,13 +25,23 @@ conflict_start_marker = "<<<<<<< "
 conflict_sep_marker = "======="
 conflict_end_marker = ">>>>>>> "
 
+-- Parses a regular block of text.
 parseText :: [String] -> [DiffSection]
-parseText txt = HText startText : parseHunk hunk where
-    (startText, hunk) = break (isPrefixOf conflict_start_marker) txt
+parseText = parseTextInternal (1, 1)
 
-parseHunk :: [String] -> [DiffSection]
-parseHunk [] = []
-parseHunk lns =
+-- (lLn, rLn) - line nos. of the hunk in local and remote files
+parseTextInternal :: (Int, Int) -> [String] -> [DiffSection]
+parseTextInternal (lLn, rLn) txt = HText startText : parseHunk (lLn', rLn') hunk where
+    (startText, hunk) = break (isPrefixOf conflict_start_marker) txt
+    lLn' = lLn + length startText
+    rLn' = rLn + length startText
+
+-- Parses a merge conflict.
+-- (lLn, rLn) - line nos. of the hunk in local and remote files
+-- lns - content of the hunk
+parseHunk :: (Int, Int) -> [String] -> [DiffSection]
+parseHunk _ [] = []
+parseHunk (lLn, rLn) lns =
     let
         header:xs = lns
         (hunk1, _:ys) = break (== conflict_sep_marker) xs
@@ -38,7 +49,10 @@ parseHunk lns =
 
         name1 = dropPrefix conflict_start_marker header
         name2 = dropPrefix conflict_end_marker footer
-    in HConflict (Hunk name1 hunk1) (Hunk name2 hunk2) : parseText rest
+
+        lLn' = lLn + length hunk1
+        rLn' = rLn + length hunk1
+    in HConflict (Hunk name1 hunk1 lLn) (Hunk name2 hunk2 rLn) : parseTextInternal (lLn', rLn') rest
 
 dropPrefix :: String -> String -> String
 dropPrefix p = drop $ length p
