@@ -65,9 +65,11 @@ resolveHunks _ _ _ [] = return []
 resolve :: Maybe DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO [String]
 resolve _ _ _ (HText s) _ = return s
 resolve mode info prev hunk@(HConflict l r) after = do
+        -- TODO: this should be user configurable
+        let contextSize = 3
         let mode' = fromMaybe (selectMode l r) mode
         clearScreen
-        displayHunk mode' info hunk
+        displayHunk mode' info (lastN contextSize prev) hunk (take contextSize after)
         displayPrompt info
 
         cmd <- untilJust (return . parsePromptOption . toUpper =<< getChar)
@@ -78,12 +80,10 @@ resolve mode info prev hunk@(HConflict l r) after = do
             Success s  -> return s
             TryAgain a b c -> resolve (a $ Just mode') (b info) prev (c hunk) after
 
-displayHunk :: DiffMode -> DiffInfo -> DiffSection -> IO ()
-displayHunk mode info (HConflict local remote) = let
+displayHunk :: DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO ()
+displayHunk mode info prev (HConflict local remote) after = let
         border = dull_cyan "--------------------------------------------------------------------------------"
     in do
-        -- TODO: should really show context of hunk...
-
         -- Header
         putStrLn border
         putStrLn . vivid_white $ filename info
@@ -103,7 +103,9 @@ displayHunk mode info (HConflict local remote) = let
         putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
         -- Show diff
+        mapM_ putStrLn prev
         mapM_ (putStr . renderDiff) $ diff mode local remote
+        mapM_ putStrLn after
 
         putStrLn border
         return ()

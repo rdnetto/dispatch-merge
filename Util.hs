@@ -26,3 +26,7 @@ firstValidM (x:xs) = do
         Nothing -> firstValidM xs
 firstValidM [] = error "firstValidM: exhausted options"
 
+-- Returns the last N items from the list, or the list itself if it is less than N items long.
+lastN :: Int -> [a] -> [a]
+lastN n xs = drop (length xs - n) xs
+
