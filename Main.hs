@@ -1,5 +1,6 @@
 import Data.Algorithm.Patience hiding (diff)
 import Data.Char (toUpper)
+import Data.List (partition)
 import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
@@ -46,7 +47,7 @@ main = do
             ]
 
     -- Resolve conflicts for each file
-    breakableForM_ args $ \f -> do
+    results <- breakableForM args $ \f -> do
         hunks <- liftM (parseText . lines) $ readFile f
         let conflict_count = length $ filter isConflict hunks
         let info i = DiffInfo f i conflict_count
@@ -60,10 +61,22 @@ main = do
         -- only git-add file if we didn't skip any sections
         when (useGit && complete) $ gitAdd f
 
-        -- If true, will cause loop to terminate prematurely.
-        breakOn term
+        -- If term is true, this will cause loop to terminate prematurely.
+        breakIf term (f, complete)
 
-    -- TODO: display a list of modified files on quit
+    -- Display results
+    clearScreen
+
+    let (resolvedFiles, unresolvedFiles) = mapBoth fst fst $ partition snd results
+    let nonnull = not . null
+    let printFN f = putStrLn $ '\t' : f
+
+    when (nonnull resolvedFiles) $ putStrLn "Resolved:"
+    forM_ resolvedFiles printFN
+    putStrLn ""
+
+    when (nonnull unresolvedFiles) $ putStrLn "Unresolved:"
+    forM_ unresolvedFiles printFN
 
 -- Recursive helper function for maintaining state while iterating over hunks.
 -- info - constructs a DiffInfo with the specified index

@@ -1,7 +1,6 @@
 module Util where
 
-import Control.Monad (replicateM_, void)
-import Control.Monad.Loops (firstM)
+import Control.Monad (replicateM_)
 import System.Console.ANSI
 import System.Console.Terminal.Size (size, height)
 import System.Exit (ExitCode)
@@ -50,10 +49,21 @@ callProcessWithExitCode path args = do
     (code, _, _) <- readProcessWithExitCode path args ""
     return code
 
--- Emulate for-each loop with early termination (break) using firstM.
-breakableForM_ :: Monad m => [a] -> (a -> m Bool) -> m ()
-breakableForM_ xs f = void $ firstM f xs
+-- Emulate for-each loop with early termination (break).
+breakableForM :: Monad m => [a] -> (a -> m (Maybe b)) -> m [b]
+breakableForM (x:xs) f = do
+    y <- f x
+    case y of
+        Just y' -> return . (y':) =<< breakableForM xs f
+        Nothing -> return []
+breakableForM [] _ = return []
 
--- Syntactic sugar for breakableForM_.
-breakOn :: Monad m => Bool -> m Bool
-breakOn = return
+-- Syntactic sugar for breakableForM. If True, breaks.
+breakIf :: Monad m => Bool -> b -> m (Maybe b)
+breakIf False x = return $ Just x
+breakIf True _ = return Nothing
+
+-- Convenience method for mapping over tuples of lists.
+mapBoth :: (a -> c) -> (b -> d) -> ([a], [b]) -> ([c], [d])
+mapBoth f g (xs, ys) = (f <$> xs, g <$> ys)
+
