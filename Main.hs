@@ -104,10 +104,9 @@ displayHunk mode info prev (HConflict local remote) after = let
         putStrLn . vivid_white $ filename info
         putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
 
-        -- TODO: IF DEBUG
         let scores = diffScores local remote
         let l x = show . fromJust $ lookup x scores
-        putStrLn $ printf "Changes: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
+        putStrLn $ printf "Change blocks: char %s, word %s, line %s" (l Char) (l Word) (l Line)
 
         -- Show line no.s, unified diff style
         let lStart = lineNo local
