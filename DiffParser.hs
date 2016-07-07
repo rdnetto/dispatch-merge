@@ -4,7 +4,7 @@ import Data.List
 
 
 data DiffSection = HText [String]
-                    | HConflict Hunk Hunk       --local, remote
+                    | HConflict Hunk Hunk       -- local, remote
                     deriving (Show, Eq)
 
 data DiffInfo = DiffInfo {

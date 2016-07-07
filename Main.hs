@@ -84,6 +84,7 @@ displayHunk mode info (HConflict local remote) = let
         let l x = show . fromJust $ lookup x scores
         putStrLn $ printf "Changes: Char %s, Word %s, Line %s" (l Char) (l Word) (l Line)
 
+        -- Show line no.s, unified diff style
         let lStart = lineNo local
         let rStart = lineNo remote
         let lCount = length $ contents local

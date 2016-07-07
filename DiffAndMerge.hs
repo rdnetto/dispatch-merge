@@ -59,7 +59,7 @@ resolveHunk RRight _ hunk = contents hunk
 resolveHunk RUnion h1 h2  = contents h1 ++ contents h2
 resolveHunk RZap _ _      = []
 
---Scores the diffs for a pair of hunks.
+-- Scores the diffs for a pair of hunks.
 diffScores :: Hunk -> Hunk -> [(DiffMode, Score)]
 diffScores l r = scores where
     score d = diffScore $ d l r
