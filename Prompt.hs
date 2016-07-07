@@ -21,8 +21,8 @@ displayPrompt :: DiffInfo -> IO ()
 displayPrompt info =
         let msg = ">> (%i of %i) -- %s\n\
                   \   L left, R right, U use both, Z zap\n\
-                  \   N line, W word, C char\n\
-                  \   Q quit, H help, S skip, E edit: "
+                  \   I line, W word, C char\n\
+                  \   Q quit, H help, N next, E edit: "
         in do
             -- need to flush because of line buffering
             putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info)
@@ -36,10 +36,10 @@ displayPromptHelp = do
             "  R -- use remote version (right/green)",
             "  U -- use both (local first)",
             "  Z -- zap (discard) both",
-            "  S -- skip to the next hunk",
+            "  N -- skip to the next hunk",
             "  E -- edit the hunk",
             "  H -- show this screen",
-            "  N -- show line-diff",
+            "  I -- show line-diff",
             "  W -- show word-diff",
             "  C -- show char-diff",
             "  Q -- quit",
@@ -58,10 +58,10 @@ parsePromptOption 'Z' = Just $ PSimpleRes RZap
 parsePromptOption 'Q' = Just PQuit
 parsePromptOption '\EOT' = Just PQuit   -- Ctrl+D
 parsePromptOption 'H' = Just PHelp
-parsePromptOption 'S' = Just PSkip
+parsePromptOption 'N' = Just PSkip
 parsePromptOption 'E' = Just PEdit
 parsePromptOption 'W' = Just $ PSetDiffMode Word
-parsePromptOption 'N' = Just $ PSetDiffMode Line
+parsePromptOption 'I' = Just $ PSetDiffMode Line
 parsePromptOption 'C' = Just $ PSetDiffMode Char
 parsePromptOption  _  = Nothing
 
