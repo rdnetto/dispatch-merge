@@ -32,7 +32,7 @@ main = do
     -- Load files
     argv <- getArgs
     args <- firstValidM [
-                (return $ safeList argv),
+                return $ safeList argv,
                 getGitConflicts,
                 error "No files found."
             ]
@@ -88,16 +88,16 @@ displayHunk mode info (HConflict local remote) = let
         putStrLn border
 
         -- Show diff
-        mapM_ (putStr . render_diff) $ diff mode local remote
+        mapM_ (putStr . renderDiff) $ diff mode local remote
 
         putStrLn border
         return ()
 
 -- Colorize a diff entry
-render_diff :: Item String -> String
-render_diff (Old x) = withColor Dull Red x
-render_diff (New x) = withColor Dull Green x
-render_diff (Both x _) = x
+renderDiff :: Item String -> String
+renderDiff (Old x) = withColor Dull Red x
+renderDiff (New x) = withColor Dull Green x
+renderDiff (Both x _) = x
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 -- TODO: should use a merge strategy consistent with the kind of diff used
