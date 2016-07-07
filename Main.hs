@@ -8,7 +8,7 @@ import System.Environment (getArgs, getEnv)
 import System.Exit (exitSuccess, ExitCode(..))
 import System.IO
 import System.IO.Temp (withSystemTempFile)
-import System.Process (callProcess, readProcessWithExitCode)
+import System.Process (readProcessWithExitCode)
 import Text.Printf
 
 import DiffAndMerge
@@ -115,11 +115,12 @@ editHunk (HConflict h1 h2) tmpfile h = do
     hPutStr h . unlines $ reconstructConflict h1 h2
     hClose h
 
-    --TODO: if subprocess fails, allow graceful recovery instead of crash
     editor:args <- liftM words . getEnv $ "EDITOR"
-    callProcess editor (args ++ [tmpfile])
+    exitCode <- callProcessWithExitCode editor (args ++ [tmpfile])
 
-    (return . Success . lines) =<< readFile tmpfile
+    case exitCode of
+        ExitSuccess -> (return . Success . lines) =<< readFile tmpfile
+        _           -> return $ TryAgain id id id
 
 -- Retrieves a list of files with conflicts if the working directory is in a git repo. Returns Nothing on failure.
 getGitConflicts :: IO (Maybe [FilePath])
@@ -128,4 +129,10 @@ getGitConflicts = do
     return $ case code of
         ExitSuccess -> Just $ lines sout
         _           -> Nothing
+
+-- Like callProcess, but doesn't throw an exception on failure.
+callProcessWithExitCode :: FilePath -> [String] -> IO ExitCode
+callProcessWithExitCode path args = do
+    (code, _, _) <- readProcessWithExitCode path args ""
+    return code
 
