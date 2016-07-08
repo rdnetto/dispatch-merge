@@ -12,7 +12,7 @@ import DiffParser
 data DiffMode = Line | Word | Char
     deriving (Show, Eq)
 
-data SimpleRes = RLeft | RRight | RUnion | RZap
+data SimpleRes = RLeft | RRight | RUnion
     deriving (Show, Eq)
 
 type Score = Int
@@ -57,7 +57,6 @@ resolveHunk :: SimpleRes -> Hunk -> Hunk -> [String]
 resolveHunk RLeft hunk _  = contents hunk
 resolveHunk RRight _ hunk = contents hunk
 resolveHunk RUnion h1 h2  = contents h1 ++ contents h2
-resolveHunk RZap _ _      = []
 
 -- Scores the diffs for a pair of hunks.
 diffScores :: Hunk -> Hunk -> [(DiffMode, Score)]
