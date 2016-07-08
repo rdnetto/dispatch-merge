@@ -9,8 +9,12 @@ It includes:
 
 ![Screenshot](.screenshot.png)
 
+# Downloads
+Pre-built binaries are available [here](https://bitbucket.org/rdnetto/dispatch-merge/downloads) for 64-bit Linux and OS X.
+An ebuild is also available for Gentoo users in my [overlay](https://github.com/rdnetto/rdnetto-overlay.git).
+
 # Build instructions
-* Install [Stack](http://docs.haskellstack.org/en/stable/README/#how-to-install) and run `stack setup`.
+* Install [Stack](http://docs.haskellstack.org/en/stable/README/#how-to-install) and run `stack setup`, if you have not done so already.
 * Run:
 
         stack install
