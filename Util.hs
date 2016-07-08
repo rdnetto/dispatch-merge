@@ -4,7 +4,7 @@ import Control.Monad (replicateM_)
 import System.Console.ANSI
 import System.Console.Terminal.Size (size, height)
 import System.Exit (ExitCode)
-import System.Process (readProcessWithExitCode)
+import System.Process (readProcess, readProcessWithExitCode)
 
 
 -- Helper methods for colours
@@ -43,6 +43,10 @@ flushTerminal = do
         Just s' -> replicateM_ (height s') (putStrLn "")
         Nothing -> return ()
 
+-- Like callProcess, but does not print to stdout.
+callProcessSilent :: FilePath -> [String] -> IO ()
+callProcessSilent f args = readProcess f args "" >> return ()
+
 -- Like callProcess, but doesn't throw an exception on failure.
 callProcessWithExitCode :: FilePath -> [String] -> IO ExitCode
 callProcessWithExitCode path args = do
@@ -67,6 +71,3 @@ breakIf True _ = return Nothing
 mapBoth :: (a -> c) -> (b -> d) -> ([a], [b]) -> ([c], [d])
 mapBoth f g (xs, ys) = (f <$> xs, g <$> ys)
 
--- Similar to fst, snd
-trd :: (a, b, c) -> c
-trd (_, _, x) = x

@@ -28,7 +28,10 @@ type F a = a -> a
 data Resolution = Resolved [String]
                 | Unresolved [String]
                 | Terminated
+                deriving (Eq, Show)
 
+border :: String
+border = dull_cyan "--------------------------------------------------------------------------------"
 
 -- TODO: fix build system
 main :: IO ()
@@ -64,9 +67,44 @@ main = do
     when (nonnull unresolvedFiles) $ putStrLn "Unresolved:"
     forM_ unresolvedFiles printFN
 
--- TODO: need to handle deleted files correctly (and test what happens when deletion is on both sides of the merge)
 resolveFile :: Bool -> Stat -> IO (Maybe (FilePath, Bool))
-resolveFile useGit stat = resolveModifiedFile useGit (trd stat)
+resolveFile useGit (Unknown, Unknown, f) = resolveModifiedFile useGit f
+resolveFile useGit (Added, Added, f) = resolveModifiedFile useGit f
+resolveFile _ (Deleted, Deleted, f) = return $ Just (f, True) -- just need to mark as resolved
+resolveFile useGit s@(x, y, f) = do
+    -- file was added/deleted on one branch
+    clearScreen
+    putStrLn border
+    putStrLn . vivid_white $ "--" ++ f
+    putStrLn $ "This file was " ++ describeConflict x y
+    putStrLn "Which version would you like to use?"
+    putStrLn ""
+    displayFilePrompt
+
+    cmd <- untilJust (return . parseFilePromptOption . toUpper =<< getChar)
+    res <- handleFileCmd cmd s
+    case res of
+        Success _ -> return $ Just (f, True)
+        TryAgain _ _ _ -> resolveFile useGit s
+        Skipped -> return $ Just (f, False)
+        Exit -> return Nothing
+
+handleFileCmd :: PromptOption -> Stat -> IO CmdOutcome
+handleFileCmd (PSimpleRes side) (l, r, f) = resolveFileConflict side (l, r) f >> return (Success [])
+handleFileCmd PHelp _ = displayFilePromptHelp >> return (TryAgain id id id)
+handleFileCmd PQuit _ = return Exit
+handleFileCmd PSkip _ = return Skipped
+
+-- git-add restores the file, git-rm deletes the file
+resolveFileConflict :: SimpleRes -> (ChangeType, ChangeType) -> FilePath -> IO ()
+resolveFileConflict RLeft (Added, Unknown) = gitAdd
+resolveFileConflict RLeft (Deleted, Unknown) = gitRemove
+resolveFileConflict RRight (Unknown, Added) = gitAdd
+resolveFileConflict RRight (Unknown, Deleted) = gitRemove
+resolveFileConflict RRight (Added, Unknown) = gitRemove
+resolveFileConflict RRight (Deleted, Unknown) = gitAdd
+resolveFileConflict RLeft (Unknown, Added) = gitRemove
+resolveFileConflict RLeft (Unknown, Deleted) = gitAdd
 
 -- Resolves a merge conflict by showing the user the diff and prompting them.
 -- Returns Just (f, complete) if the file was processed, or Nothing if the user terminated.
@@ -129,7 +167,7 @@ resolve mode info prev hunk@(HConflict l r) after = do
         let mode' = fromMaybe (selectMode l r) mode
         clearScreen
         displayHunk mode' info (lastN contextSize prev) hunk (take contextSize after)
-        displayPrompt info
+        displayModPrompt info
 
         cmd <- untilJust (return . parsePromptOption . toUpper =<< getChar)
         putStrLn ""
@@ -142,33 +180,31 @@ resolve mode info prev hunk@(HConflict l r) after = do
             Exit -> return Terminated
 
 displayHunk :: DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO ()
-displayHunk mode info prev (HConflict local remote) after = let
-        border = dull_cyan "--------------------------------------------------------------------------------"
-    in do
-        -- Header
-        putStrLn border
-        putStrLn . vivid_white $ filename info
-        putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
+displayHunk mode info prev (HConflict local remote) after = do
+    -- Header
+    putStrLn border
+    putStrLn . vivid_white $ filename info
+    putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
 
-        let scores = diffScores local remote
-        let l x = show . fromJust $ lookup x scores
-        putStrLn $ printf "Change blocks: char %s, word %s, line %s" (l Char) (l Word) (l Line)
+    let scores = diffScores local remote
+    let l x = show . fromJust $ lookup x scores
+    putStrLn $ printf "Change blocks: char %s, word %s, line %s" (l Char) (l Word) (l Line)
 
-        -- Show line no.s, unified diff style
-        let lStart = lineNo local
-        let rStart = lineNo remote
-        let lCount = length $ contents local
-        let rCount = length $ contents remote
-        putStrLn border
-        putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
+    -- Show line no.s, unified diff style
+    let lStart = lineNo local
+    let rStart = lineNo remote
+    let lCount = length $ contents local
+    let rCount = length $ contents remote
+    putStrLn border
+    putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
-        -- Show diff
-        mapM_ putStrLn prev
-        mapM_ (putStr . renderDiff) $ diff mode local remote
-        mapM_ putStrLn after
+    -- Show diff
+    mapM_ putStrLn prev
+    mapM_ (putStr . renderDiff) $ diff mode local remote
+    mapM_ putStrLn after
 
-        putStrLn border
-        return ()
+    putStrLn border
+    return ()
 
 -- Colorize a diff entry
 renderDiff :: Item String -> String
@@ -182,7 +218,7 @@ handleCmd (PSimpleRes res) (HConflict h1 h2) = return . Success $ resolveHunk re
 handleCmd (PSetDiffMode d) _ = return $ TryAgain (const $ Just d) id id
 handleCmd PSkip _ = return Skipped
 handleCmd PEdit hunk = withSystemTempFile "hunk" $ editHunk hunk
-handleCmd PHelp _ = displayPromptHelp >> return (TryAgain id id id)
+handleCmd PHelp _ = displayModPromptHelp >> return (TryAgain id id id)
 handleCmd PQuit _ = return Exit
 
 editHunk :: DiffSection -> FilePath -> Handle -> IO CmdOutcome
