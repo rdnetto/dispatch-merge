@@ -1,5 +1,5 @@
 -- This module contains logic for diffing and merging hunks
-module DiffAndMerge(DiffMode(..), SimpleRes(..), diff, resolveHunk, diffScores, selectMode) where
+module Diffs(DiffMode(..), SimpleRes(..), diff, resolveHunk, diffScores, selectMode) where
 
 import qualified Data.Algorithm.Patience as DAP
 import Data.Algorithm.Patience hiding (diff)

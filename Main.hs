@@ -11,7 +11,7 @@ import System.IO
 import System.IO.Temp (withSystemTempFile)
 import Text.Printf
 
-import DiffAndMerge
+import Diffs
 import DiffParser
 import Git
 import Prompt

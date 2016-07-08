@@ -3,8 +3,8 @@ module Prompt where
 import System.IO (hFlush, stdout)
 import Text.Printf
 
-import DiffAndMerge
 import DiffParser
+import Diffs
 import Util
 
 
