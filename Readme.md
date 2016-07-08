@@ -10,7 +10,7 @@ It includes:
 ![Screenshot](.screenshot.png)
 
 # Build instructions
-* Install [Stack](http://docs.haskellstack.org/en/stable/README/#how-to-install).
+* Install [Stack](http://docs.haskellstack.org/en/stable/README/#how-to-install) and run `stack setup`.
 * Run:
 
         stack install
