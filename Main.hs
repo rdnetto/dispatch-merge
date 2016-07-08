@@ -42,29 +42,13 @@ main = do
     argv <- getArgs
     (useGit, args) <- firstValidM [
                 -- TODO: this would probably be much clearer with a monad transformer
-                return $ (False,) <$> safeList argv,
+                return $ (False,) . fmap simpleStat <$> safeList argv,
                 fmap (True,) <$> getGitConflicts,
                 error "No files found."
             ]
 
     -- Resolve conflicts for each file
-    -- TODO: need to handle deleted files correctly (and test what happens when deletion is on both sides of the merge)
-    results <- breakableForM args $ \f -> do
-        hunks <- liftM (parseText . lines) $ readFile f
-        let conflict_count = length $ filter isConflict hunks
-        let info i = DiffInfo f i conflict_count
-
-        (term, resolutions) <- resolveHunks info 1 [] hunks
-        let complete = and $ isResolved <$> resolutions
-        let resolvedHunks = getResolution <$> resolutions
-
-        writeFile f . unlines $ concat resolvedHunks
-
-        -- only git-add file if we didn't skip any sections
-        when (useGit && complete) $ gitAdd f
-
-        -- If term is true, this will cause loop to terminate prematurely.
-        breakIf term (f, complete)
+    results <- breakableForM args $ resolveFile useGit
 
     -- Display results
     clearScreen
@@ -79,6 +63,32 @@ main = do
 
     when (nonnull unresolvedFiles) $ putStrLn "Unresolved:"
     forM_ unresolvedFiles printFN
+
+-- TODO: need to handle deleted files correctly (and test what happens when deletion is on both sides of the merge)
+resolveFile :: Bool -> Stat -> IO (Maybe (FilePath, Bool))
+resolveFile useGit stat = resolveModifiedFile useGit (trd stat)
+
+-- Resolves a merge conflict by showing the user the diff and prompting them.
+-- Returns Just (f, complete) if the file was processed, or Nothing if the user terminated.
+-- useGit - if True, run git-add for a fully resolved file
+-- f - path to file
+resolveModifiedFile :: Bool -> FilePath -> IO (Maybe (FilePath, Bool))
+resolveModifiedFile useGit f = do
+    hunks <- liftM (parseText . lines) $ readFile f
+    let conflict_count = length $ filter isConflict hunks
+    let info i = DiffInfo f i conflict_count
+
+    (term, resolutions) <- resolveHunks info 1 [] hunks
+    let complete = and $ isResolved <$> resolutions
+    let resolvedHunks = getResolution <$> resolutions
+
+    writeFile f . unlines $ concat resolvedHunks
+
+    -- only git-add file if we didn't skip any sections
+    when (useGit && complete) $ gitAdd f
+
+    -- If term is true, this will cause loop to terminate prematurely.
+    breakIf term (f, complete)
 
 -- Recursive helper function for maintaining state while iterating over hunks.
 -- info - constructs a DiffInfo with the specified index

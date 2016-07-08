@@ -67,3 +67,6 @@ breakIf True _ = return Nothing
 mapBoth :: (a -> c) -> (b -> d) -> ([a], [b]) -> ([c], [d])
 mapBoth f g (xs, ys) = (f <$> xs, g <$> ys)
 
+-- Similar to fst, snd
+trd :: (a, b, c) -> c
+trd (_, _, x) = x
