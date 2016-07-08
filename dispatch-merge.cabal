@@ -1,0 +1,31 @@
+name:                dispatch-merge
+version:             1.0.0.0
+synopsis:            Command-line tool for resolving merge conflicts.
+description:         Please see README.md
+homepage:            https://bitbucket.org/rdnetto/dispatch-merge
+license:             Apache
+license-file:        LICENSE
+author:              Reuben D'Netto
+maintainer:          rdnetto@atlassian.com
+copyright:           Atlassian 2016
+category:            Git
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable dispatch-merge
+  hs-source-dirs:      src
+  main-is:             Main.hs
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall
+  build-depends:       base
+                     , ansi-terminal
+                     , monad-loops
+                     , patience
+                     , process
+                     , temporary
+                     , terminal-size
+  default-language:    Haskell2010
+  default-extensions:  TupleSections
+
+source-repository head
+  type:     git
+  location: https://rdnetto@bitbucket.org/rdnetto/dispatch-merge.git
