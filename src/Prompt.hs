@@ -22,7 +22,7 @@ displayModPrompt :: DiffInfo -> IO ()
 displayModPrompt info =
     let msg = ">> (%i of %i) -- %s\n\
               \   %s, %s, %s\n\
-              \   I line, W word, C char\n\
+              \   A raw, I line, W word, C char\n\
               \   Q quit, H help, N next, E edit: "
         lmsg = withColor Dull Red "L local"
         rmsg = withColor Dull Green "R remote"
@@ -92,6 +92,7 @@ parsePromptOption 'E' = Just PEdit
 parsePromptOption 'W' = Just $ PSetDiffMode Word
 parsePromptOption 'I' = Just $ PSetDiffMode Line
 parsePromptOption 'C' = Just $ PSetDiffMode Char
+parsePromptOption 'A' = Just $ PSetDiffMode Raw
 parsePromptOption  _  = Nothing
 
 -- Restricted version of parsePromptOption

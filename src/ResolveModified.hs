@@ -127,10 +127,13 @@ displayHunk mode info prev (HConflict local remote) after = do
     putStrLn border
     putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
-    -- Show diff
-    mapM_ putStrLn prev
+    -- Show diff, with left-padding for raw mode
+    let lpad = case mode of
+                    Raw -> map (' ':)
+                    _   -> id
+    mapM_ putStrLn $ lpad prev
     mapM_ (putStr . renderDiff) $ diff mode local remote
-    mapM_ putStrLn after
+    mapM_ putStrLn $ lpad after
 
     putStrLn border
     return ()

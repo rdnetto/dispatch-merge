@@ -9,7 +9,7 @@ import Data.Monoid
 import DiffParser
 
 
-data DiffMode = Line | Word | Char
+data DiffMode = Line | Word | Char | Raw
     deriving (Show, Eq)
 
 data SimpleRes = RLeft | RRight | RUnion
@@ -19,9 +19,16 @@ type Score = Int
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
+diff Raw  l r = rawDiff l r
 diff Line l r = lineDiff l r
 diff Word l r = wordDiff l r
 diff Char l r = sCharDiff l r
+
+rawDiff :: Hunk -> Hunk -> [Item String]
+rawDiff l r = DAP.diff l' r' where
+    f c x = c : x ++ "\n"
+    l' = f '-' <$> contents l
+    r' = f '+' <$> contents r
 
 lineDiff :: Hunk -> Hunk -> [Item String]
 lineDiff l r = DAP.diff (f l) (f r) where
@@ -70,14 +77,19 @@ diffScores l r = scores where
 
 -- Heuristically selects the optimal diff mode
 selectMode :: Hunk -> Hunk -> DiffMode
-selectMode l r = mode where
-    -- if a mode has a score higher than threshold, select the next one
-    threshold = 4
-    thresholdCrit = (<= threshold) . snd
-    candidates = filter thresholdCrit $ diffScores l r
-    mode = case candidates of
-            m:_ -> fst m
-            []  -> Line
+selectMode l r
+    -- if a non-empty hunk consists entirely of whitespace, use raw mode
+    | isWS l || isWS r = Raw
+    | otherwise        = mode
+    where
+        isWS = (all isSpace) . concat . contents
+        -- if a mode has a score higher than threshold, select the next one
+        threshold = 4
+        thresholdCrit = (<= threshold) . snd
+        candidates = filter thresholdCrit $ diffScores l r
+        mode = case candidates of
+                m:_ -> fst m
+                []  -> Line
 
 -- Measures the complexity of a diff, in terms of the no. of changes. Higher = more complex.
 diffScore :: [Item String] -> Score
