@@ -1,5 +1,6 @@
 module Prompt where
 
+import System.Console.ANSI
 import System.IO (hFlush, stdout)
 import Text.Printf
 
@@ -20,12 +21,15 @@ data PromptOption = PSimpleRes SimpleRes
 displayModPrompt :: DiffInfo -> IO ()
 displayModPrompt info =
     let msg = ">> (%i of %i) -- %s\n\
-              \   L local, R remote, U use both\n\
+              \   %s, %s, %s\n\
               \   I line, W word, C char\n\
               \   Q quit, H help, N next, E edit: "
+        lmsg = withColor Dull Red "L local"
+        rmsg = withColor Dull Green "R remote"
+        umsg = withColor Dull Yellow "U use both"
     in do
         -- need to flush because of line buffering
-        putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info)
+        putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info) lmsg rmsg umsg
         hFlush stdout
 
 displayModPromptHelp :: IO ()
@@ -51,11 +55,13 @@ displayModPromptHelp = do
 
 displayFilePrompt :: IO ()
 displayFilePrompt =
-    let msg = ">> L local, R remote\n\
+    let lmsg = withColor Dull Red "L local"
+        rmsg = withColor Dull Green "R remote"
+        msg  = ">> %s, %s\n\
               \   Q quit, H help, N next: "
     in do
         -- need to flush because of line buffering
-        putStr $ vivid_white msg
+        putStr . vivid_white $ printf msg lmsg rmsg
         hFlush stdout
 
 displayFilePromptHelp :: IO ()
