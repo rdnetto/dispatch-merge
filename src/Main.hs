@@ -12,7 +12,6 @@ import ResolveModified
 import ResolveDeleted
 import Util
 
--- TODO: fix build system
 main :: IO ()
 main = do
     -- Configure terminal - configure stdin for reading individual keys, and move cursor to the bottom of stdout.
