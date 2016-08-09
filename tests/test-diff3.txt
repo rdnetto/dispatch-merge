@@ -1,0 +1,15 @@
+Here's some text about planets.
+<<<<<<< HEAD
+the number of planets is nine.
+||||||| merged common ancestors
+The number of planet is seven.
+=======
+The number of planets is eight.
+>>>>>>> branch-a
+We live on earth.
+<<<<<<< HEAD
+We love pluto!
+=======
+We hate pluto!
+>>>>>>> branch-a
+Astronomy is serious business.
