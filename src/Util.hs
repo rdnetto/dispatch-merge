@@ -71,3 +71,6 @@ breakIf True _ = return Nothing
 mapBoth :: (a -> c) -> (b -> d) -> ([a], [b]) -> ([c], [d])
 mapBoth f g (xs, ys) = (f <$> xs, g <$> ys)
 
+appendNL :: String -> String
+appendNL = (++ " \n")
+

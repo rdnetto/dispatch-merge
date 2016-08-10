@@ -7,6 +7,7 @@ import Data.Char (isSpace, isSymbol)
 import Data.Monoid
 
 import DiffParser
+import Util (appendNL)
 
 
 data DiffMode = Line | Word | Char | Raw
@@ -55,9 +56,6 @@ safeBreak _ [] = []
 safeBreak f t = p : ws : safeBreak f s where
     (p, x) = break f t
     (ws, s) = span f x
-
-appendNL :: String -> String
-appendNL = (++ " \n")
 
 -- Performs simple, pure resolution
 resolveHunk :: SimpleRes -> Hunk -> Hunk -> [String]
