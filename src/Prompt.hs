@@ -24,9 +24,9 @@ displayModPrompt info =
               \   %s, %s, %s\n\
               \   A raw, I line, W word, C char\n\
               \   Q quit, H help, N next, E edit: "
-        lmsg = withColor Dull Red "L local"
-        rmsg = withColor Dull Green "R remote"
-        umsg = withColor Dull Yellow "U use both"
+        lmsg = dull_red "L local"
+        rmsg = dull_green "R remote"
+        umsg = dull_yellow "U use both"
     in do
         -- need to flush because of line buffering
         putStr . vivid_white $ printf msg (index info) (diffCount info) (filename info) lmsg rmsg umsg
@@ -55,8 +55,8 @@ displayModPromptHelp = do
 
 displayFilePrompt :: IO ()
 displayFilePrompt =
-    let lmsg = withColor Dull Red "L local"
-        rmsg = withColor Dull Green "R remote"
+    let lmsg = dull_red "L local"
+        rmsg = dull_green "R remote"
         msg  = ">> %s, %s\n\
               \   Q quit, H help, N next: "
     in do

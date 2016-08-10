@@ -140,8 +140,8 @@ displayHunk mode info prev (HConflict local remote) after = do
 
 -- Colorize a diff entry
 renderDiff :: Item String -> String
-renderDiff (Old x) = withColor Dull Red x
-renderDiff (New x) = withColor Dull Green x
+renderDiff (Old x) = dull_red x
+renderDiff (New x) = dull_green x
 renderDiff (Both x _) = x
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.

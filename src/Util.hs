@@ -8,9 +8,12 @@ import System.Process (readProcess, readProcessWithExitCode)
 
 
 -- Helper methods for colours
-vivid_white, dull_cyan :: String -> String
+dull_red, dull_green, dull_yellow, vivid_white, dull_cyan :: String -> String
 vivid_white = withColor Vivid White
 dull_cyan = withColor Dull Cyan
+dull_red = withColor Dull Red
+dull_green = withColor Dull Green
+dull_yellow = withColor Dull Yellow
 
 -- Wrap a string in ANSI escape codes to colour it.
 withColor :: ColorIntensity -> Color -> String -> String
