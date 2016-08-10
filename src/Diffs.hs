@@ -20,16 +20,10 @@ type Score = Int
 
 
 diff :: DiffMode -> Hunk -> Hunk -> [Item String]
-diff Raw  l r = rawDiff l r
+diff Raw  l r = lineDiff l r
 diff Line l r = lineDiff l r
 diff Word l r = wordDiff l r
 diff Char l r = sCharDiff l r
-
-rawDiff :: Hunk -> Hunk -> [Item String]
-rawDiff l r = DAP.diff l' r' where
-    f c x = c : x ++ "\n"
-    l' = f '-' <$> contents l
-    r' = f '+' <$> contents r
 
 lineDiff :: Hunk -> Hunk -> [Item String]
 lineDiff l r = DAP.diff (f l) (f r) where

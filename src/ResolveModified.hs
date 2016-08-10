@@ -1,10 +1,11 @@
 module ResolveModified where
 
 import Data.Algorithm.Patience hiding (diff)
-import Data.Char (toUpper)
+import Data.Char (isPrint, toUpper)
 import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
+import Safe (maximumDef)
 import System.Console.ANSI
 import System.Environment (getEnv)
 import System.Exit (ExitCode(..))
@@ -127,13 +128,19 @@ displayHunk mode info prev (HConflict local remote) after = do
     putStrLn border
     putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
-    -- Show diff, with left-padding for raw mode
-    let lpad = case mode of
-                    Raw -> map (' ':)
-                    _   -> id
-    mapM_ putStrLn $ lpad prev
-    mapM_ (putStr . renderDiff) $ diff mode local remote
-    mapM_ putStrLn $ lpad after
+    -- Convert context lines to Items, so we don't need to treat them as a special case
+    let lines = (toBoth . appendNL <$> prev)
+                ++ diff mode local remote
+                ++ (toBoth . appendNL <$> after)
+
+    -- Determine what (if anything) to display in the left margin of the diff.
+    -- Each element is a list of lines to display for a given line of diff.
+    -- TODO: add support for rendering blames
+    let margin = case mode of
+                    Raw -> return . colourItemChar <$> lines
+                    _   -> replicate (length lines) []
+
+    mapM_ putStr $ pairMargin margin (renderDiff <$> lines)
 
     putStrLn border
     return ()
@@ -177,4 +184,62 @@ getResolution :: Resolution -> [String]
 getResolution (Resolved s) = s
 getResolution (Unresolved s) = s
 getResolution _ = error "Unresolvable resolution"
+
+toBoth :: a -> Item a
+toBoth x = Both x x
+
+-- This function pairs an arbitrary no. of margin notes with a line of diff.
+-- It pads the margin notes as needed to ensure the start of each line the diff lines up.
+pairMargin :: [[String]] -> [String] -> [String]
+pairMargin margins diffLines = res where
+    -- Compute max length for margin, capped at a reasonable value
+    -- TODO: cap should be user configurable
+    marginMaxLength = maximumDef 0 . concat $ map2 (length . filter isPrint) margins
+    marginWidth = min marginMaxLength 20
+
+    -- Match margin notes to diff lines
+    res = zipWith pairMargin' margins diffLines
+
+    -- Helper function for mapping over nested lists
+    map2 :: (a -> b) -> [[a]] -> [[b]]
+    map2 f = map (map f)
+
+    -- Combines margin notes and diff line into a single (multi-line) string.
+    -- Note that we expect diff to end in a new line, but not the margin notes.
+    pairMargin' :: [String] -> String -> String
+    pairMargin' [] line = pairMargin1 "" line
+    pairMargin' [marginNote] line = pairMargin1 marginNote line
+    pairMargin' (mn0:mns) line = concat $ line1 : rest where
+        line1 = pairMargin1 mn0 line
+        rest  = zipWith pairMargin1 mns (repeat "\n")
+
+    -- Like pairMargin', but deals with the base case of a single, one-line margin note.
+    pairMargin1 :: String -> String -> String
+    pairMargin1 marginNote line = padMargin marginNote ++ line' where
+        line' = if   marginWidth == 0
+                then line
+                else ' ' : line
+
+    padMargin :: String -> String
+    padMargin = rpad marginWidth ' ' isPrint
+
+-- Right pads a list to the desired length, using the specified padding element. Does not count elements which fail pred.
+rpad :: Int -> a -> (a -> Bool) -> [a] -> [a]
+rpad n p f xs = takeWhere f n (xs ++ repeat p)
+
+-- Returns the longest possible prefix of xs that contains n elements which satisfy f.
+-- Elements which do not satisfy f are included, but not counted.
+takeWhere :: (a -> Bool) -> Int -> [a] -> [a]
+takeWhere _ _ [] = []
+takeWhere f 0 (x0:xs) | f x0      = []
+                      | otherwise = x0 : takeWhere f 0  xs
+takeWhere f n (x0:xs) | f x0      = x0 : takeWhere f n' xs
+                      | otherwise = x0 : takeWhere f n  xs
+                      where n' = n - 1
+
+-- Like DAP.itemChar, but with ANSI colouring
+colourItemChar :: Item a -> String
+colourItemChar (Old _) = dull_red "-"
+colourItemChar (New _) = dull_green "+"
+colourItemChar (Both _ _) = " "
 
