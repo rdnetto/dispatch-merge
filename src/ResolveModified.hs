@@ -42,7 +42,7 @@ border = dull_cyan "------------------------------------------------------------
 -- f - path to file
 resolveModifiedFile :: Bool -> FilePath -> IO (Maybe (FilePath, Bool))
 resolveModifiedFile useGit f = do
-    hunks <- liftM (parseText . lines) $ readFile f
+    hunks <- parseText . lines <$> readFile f
     let conflict_count = length $ filter isConflict hunks
     let info i = DiffInfo f i conflict_count
 
