@@ -3,7 +3,8 @@ module Git where
 import Data.Char (isSpace)
 import Data.Maybe (catMaybes)
 import System.Exit (ExitCode(..))
-import System.Process (readProcessWithExitCode)
+import System.FilePath ((</>))
+import System.Process (readProcess, readProcessWithExitCode)
 
 import Util
 
@@ -13,6 +14,11 @@ data ChangeType = Deleted | Added | Unknown
     deriving (Eq, Show)
 
 type Stat = (ChangeType, ChangeType, FilePath)
+type CommitHash = String
+data BlameInfo = BlameInfo {
+                    commit :: CommitHash,
+                    summary :: String
+                }
 
 -- There are other change types, but we don't care about them.
 readChangeType :: Char -> Maybe ChangeType
@@ -45,6 +51,24 @@ getGitConflicts = do
         ExitSuccess -> Just stats
         _           -> Nothing
 
+-- Returns the path to the .git directory, based on the current working directory
+gitDir :: IO FilePath
+gitDir = readProcess "git" ["rev-parse", "--git-dir"] ""
+
+-- Returns the commit from the local branch. Throws exception on failure.
+-- TODO: fix error handling
+getLocalCommit :: IO CommitHash
+getLocalCommit = do
+    d <- gitDir
+    readFile $ d </> "ORIG_HEAD"
+
+-- Returns the commit from the remote branch. Throws exception on failure.
+-- TODO: fix error handling
+getRemoteCommit :: IO CommitHash
+getRemoteCommit = do
+    d <- gitDir
+    readFile $ d </> "MERGE_HEAD"
+
 parseStat :: String -> Maybe Stat
 parseStat s = res where
     (stat, f) = break isSpace s
@@ -61,4 +85,8 @@ gitAdd f = callProcessSilent "git" ["add", f]
 -- Runs git rm on the specified file. Throws an exception on failure.
 gitRemove :: FilePath -> IO ()
 gitRemove f = callProcessSilent "git" ["rm", f]
+
+-- Runs git-blame on part of a revision of a file, and parses the output.
+gitBlame :: FilePath -> CommitHash -> Int -> Int -> IO BlameInfo
+gitBlame file rev lineNo lineCount = error "Not implemented"
 
