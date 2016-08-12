@@ -64,16 +64,16 @@ gitDir = rstrip <$> readProcess "git" ["rev-parse", "--git-dir"] ""
 -- Returns the commit from the local branch. Throws exception on failure.
 -- TODO: fix error handling
 getLocalCommit :: IO CommitHash
-getLocalCommit = rstrip <$> do
+getLocalCommit = do
     d <- gitDir
-    readFile $ d </> "ORIG_HEAD"
+    rstrip <$> readFile (d </> "ORIG_HEAD")
 
 -- Returns the commit from the remote branch. Throws exception on failure.
 -- TODO: fix error handling
 getRemoteCommit :: IO CommitHash
-getRemoteCommit = rstrip <$> do
+getRemoteCommit = do
     d <- gitDir
-    readFile $ d </> "MERGE_HEAD"
+    rstrip <$> readFile (d </> "MERGE_HEAD")
 
 parseStat :: String -> Maybe Stat
 parseStat s = res where

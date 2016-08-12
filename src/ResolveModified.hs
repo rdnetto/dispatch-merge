@@ -1,7 +1,7 @@
 module ResolveModified where
 
 import Data.Algorithm.Patience hiding (diff)
-import Data.Char (isPrint, toUpper)
+import Data.Char (toUpper)
 import Data.List (find)
 import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad (liftM, when)
