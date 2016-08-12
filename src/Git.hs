@@ -56,6 +56,15 @@ getGitConflicts = do
         ExitSuccess -> Just stats
         _           -> Nothing
 
+parseStat :: String -> Maybe Stat
+parseStat s = res where
+    (stat, f) = break isSpace s
+    f' = dropWhile isSpace f
+
+    res = case readChangeType <$> stat of
+        [Just a, Just b] -> Just (a, b, f')
+        _                -> Nothing
+
 -- Returns the path to the .git directory, based on the current working directory.
 -- (Need init to remove trailing newline)
 gitDir :: IO FilePath
@@ -74,15 +83,6 @@ getRemoteCommit :: IO CommitHash
 getRemoteCommit = do
     d <- gitDir
     rstrip <$> readFile (d </> "MERGE_HEAD")
-
-parseStat :: String -> Maybe Stat
-parseStat s = res where
-    (stat, f) = break isSpace s
-    f' = dropWhile isSpace f
-
-    res = case readChangeType <$> stat of
-        [Just a, Just b] -> Just (a, b, f')
-        _                -> Nothing
 
 -- Runs git add on the specified file. Throws an exception on failure.
 gitAdd :: FilePath -> IO ()
