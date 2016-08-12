@@ -1,6 +1,5 @@
 module Prompt where
 
-import System.Console.ANSI
 import System.IO (hFlush, stdout)
 import Text.Printf
 
