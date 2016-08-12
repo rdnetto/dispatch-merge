@@ -116,3 +116,7 @@ parseBlameInfo metadata (_:diff_content) = BlameInfo hash title diff_content whe
     (hash:_):records = metadata'
     title = unwords . tail . fromJust $ find (\(x:_) -> x == "summary") records
 
+-- Converts a ref to a short hash.
+gitShortHash :: String -> IO CommitHash
+gitShortHash ref = rstrip <$> readProcess "git" ["rev-parse", "--short", ref] ""
+

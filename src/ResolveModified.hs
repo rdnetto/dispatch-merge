@@ -140,8 +140,8 @@ displayHunk mode info prev (HConflict local remote) after = do
     -- TODO: cache this, instead of calling it each time we render the diff (this func gets called each time the user changes the diff mode)
     lHash <- getLocalCommit
     rHash <- getRemoteCommit
-    localMNote  <- gitBlame fname lHash lStart lCount
-    remoteMNote <- gitBlame fname rHash rStart rCount
+    localMNote  <- mapM shortenHash =<< gitBlame fname lHash lStart lCount
+    remoteMNote <- mapM shortenHash =<< gitBlame fname rHash rStart rCount
 
     -- Determine what (if anything) to display in the left margin of the diff.
     -- TODO: add support for rendering blames
@@ -155,6 +155,12 @@ displayHunk mode info prev (HConflict local remote) after = do
 
     putStrLn border
     return ()
+
+-- Convenience function for replacing the commit hash with a shorter representation.
+shortenHash :: BlameInfo -> IO BlameInfo
+shortenHash info = do
+    h <- gitShortHash $ commit info
+    return $ info { commit = h }
 
 -- Colorize a diff entry
 renderDiff :: Item String -> String
@@ -171,9 +177,9 @@ muxBlames ((Old _):is) (l0:ls) rs = dull_red   (renderBlame l0) : muxBlames is l
 muxBlames ((New _):is) ls (r0:rs) = dull_green (renderBlame r0) : muxBlames is ls rs
 muxBlames [] [] [] = []
 
--- FIXME: ask git what the correct length to use here is
+-- Convert the BlameInfo into a user-friendly representation.
 renderBlame :: BlameInfo -> String
-renderBlame info = take 6 $ commit info
+renderBlame info = commit info
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
