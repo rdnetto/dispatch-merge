@@ -1,7 +1,7 @@
 module Util where
 
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
+import Data.List (dropWhileEnd, stripPrefix)
 import Control.Monad (replicateM_)
 import System.Console.ANSI
 import System.Console.Terminal.Size (size, height)
@@ -92,4 +92,16 @@ stripAnsi "" = ""
 -- Returns the prefixes of xs, in descending order of length. Includes [].
 prefixes :: [a] -> [[a]]
 prefixes xs = (flip take $ xs) <$> reverse [0 .. length xs]
+
+-- String replace function
+replace :: Eq a => [a] -> [a] -> [a] -> [a]
+replace _ _ [] = []
+replace needle subst haystack@(h0:hs) = res where
+    res = case stripPrefix needle haystack of
+            Just x  -> subst ++ replace needle subst x
+            Nothing -> h0 : replace needle subst hs
+
+-- Helper function for mapping over nested lists
+map2 :: (a -> b) -> [[a]] -> [[b]]
+map2 f = map (map f)
 

@@ -151,7 +151,10 @@ displayHunk mode info prev (HConflict local remote) after = do
                     Line -> return <$> muxBlames sections localMNote remoteMNote
                     _    -> replicate (length sections) []
 
-    mapM_ putStr $ pairMargin margin (renderDiff <$> sections)
+    -- Remove the reset code, so that the border has the same colour
+    let margin' = map2 (replace (setSGRCode []) "") margin
+
+    mapM_ putStr $ pairMargin margin' (renderDiff <$> sections)
 
     putStrLn border
     return ()
@@ -179,7 +182,7 @@ muxBlames [] [] [] = []
 
 -- Convert the BlameInfo into a user-friendly representation.
 renderBlame :: BlameInfo -> String
-renderBlame info = commit info
+renderBlame info = commit info ++ " " ++ summary info
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
@@ -225,14 +228,10 @@ pairMargin margins diffLines = res where
     -- Compute max length for margin, capped at a reasonable value
     -- TODO: cap should be user configurable
     marginMaxLength = maximumDef 0 . concat $ map2 (length . stripAnsi) margins
-    marginWidth = min marginMaxLength 20
+    marginWidth = min marginMaxLength 60
 
     -- Match margin notes to diff lines
     res = zipWith pairMargin' margins diffLines
-
-    -- Helper function for mapping over nested lists
-    map2 :: (a -> b) -> [[a]] -> [[b]]
-    map2 f = map (map f)
 
     -- Combines margin notes and diff line into a single (multi-line) string.
     -- Note that we expect diff to end in a new line, but not the margin notes.
@@ -246,9 +245,9 @@ pairMargin margins diffLines = res where
     -- Like pairMargin', but deals with the base case of a single, one-line margin note.
     pairMargin1 :: String -> String -> String
     pairMargin1 marginNote line = padMargin marginNote ++ line' where
-        line' = if   marginWidth == 0
+        line' = if   marginWidth <= 1
                 then line
-                else ' ' : line
+                else " | " ++ line
 
     -- Truncates/pads the string to marginWidth length, ignoring ANSI escape codes.
     padMargin :: String -> String
