@@ -1,7 +1,9 @@
 module Git where
 
 import Data.Char (isSpace)
-import Data.Maybe (catMaybes)
+import Data.List (find)
+import Data.List.Split (chop, dropBlanks, split, whenElt)
+import Data.Maybe (catMaybes, fromJust)
 import System.Exit (ExitCode(..))
 import System.FilePath ((</>))
 import System.Process (readProcess, readProcessWithExitCode)
@@ -13,12 +15,15 @@ import Util
 data ChangeType = Deleted | Added | Unknown
     deriving (Eq, Show)
 
-type Stat = (ChangeType, ChangeType, FilePath)
-type CommitHash = String
+-- Represents info parsed from git-blame porcelain format
 data BlameInfo = BlameInfo {
                     commit :: CommitHash,
-                    summary :: String
-                }
+                    summary :: String,
+                    content :: String
+                } deriving (Eq, Show)
+
+type Stat = (ChangeType, ChangeType, FilePath)
+type CommitHash = String
 
 -- There are other change types, but we don't care about them.
 readChangeType :: Char -> Maybe ChangeType
@@ -87,6 +92,26 @@ gitRemove :: FilePath -> IO ()
 gitRemove f = callProcessSilent "git" ["rm", f]
 
 -- Runs git-blame on part of a revision of a file, and parses the output.
-gitBlame :: FilePath -> CommitHash -> Int -> Int -> IO BlameInfo
-gitBlame file rev lineNo lineCount = error "Not implemented"
+-- TODO: better error handling - currently throws on failure
+gitBlame :: FilePath -> CommitHash -> Int -> Int -> IO [BlameInfo]
+gitBlame file rev lineNo lineCount = do
+    let lineRange = (show lineNo) ++ ",+" ++ (show lineCount)
+    output <- readProcess "git" ["blame", "--line-porcelain", "-L", lineRange, rev, "--", file] ""
+
+    -- Each section consists of multiple lines of metadata, followed by a line of content prefixed by a tab.
+    -- This splitter breaks the list of lines into elements consisting of either metadata or content.
+    let startsWithTab x = (head x) == '\t'
+    let tokenizer = dropBlanks (whenElt startsWithTab)
+    let sections = split tokenizer $ lines output
+
+    -- Extract the metadata-content pairs, and map them into BlameInfo
+    let takeBlame (md:[c]:xs) = ((md, c), xs)
+    return $ uncurry parseBlameInfo <$> chop takeBlame sections
+
+-- Parses `git blame --porcelain` output for a single line
+parseBlameInfo :: [String] -> String -> BlameInfo
+parseBlameInfo metadata (_:diff_content) = BlameInfo hash title diff_content where
+    metadata' = words <$> metadata
+    (hash:_):records = metadata'
+    title = unwords . tail . fromJust $ find (\(x:_) -> x == "summary") records
 

@@ -23,6 +23,7 @@ executable dispatch-merge
                      , patience
                      , process
                      , safe
+                     , split
                      , temporary
                      , terminal-size
   default-language:    Haskell2010
