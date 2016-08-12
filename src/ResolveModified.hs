@@ -4,7 +4,7 @@ import Data.Algorithm.Patience hiding (diff)
 import Data.Char (isPrint, toUpper)
 import Data.List (find)
 import Data.Maybe (fromMaybe, fromJust)
-import Control.Monad
+import Control.Monad (liftM, when)
 import Control.Monad.Loops (untilJust)
 import Safe (maximumDef)
 import System.Console.ANSI
@@ -113,8 +113,9 @@ resolve mode info prev hunk@(HConflict l r) after = do
 displayHunk :: DiffMode -> DiffInfo -> [String] -> DiffSection -> [String] -> IO ()
 displayHunk mode info prev (HConflict local remote) after = do
     -- Header
+    let fname = filename info
     putStrLn border
-    putStrLn . vivid_white $ filename info
+    putStrLn . vivid_white $ fname
     putStrLn . vivid_white $ printf "Hunk %i of %i" (index info) (diffCount info)
 
     let scores = diffScores local remote
@@ -122,26 +123,35 @@ displayHunk mode info prev (HConflict local remote) after = do
     putStrLn $ printf "Change blocks: char %s, word %s, line %s" (l Char) (l Word) (l Line)
 
     -- Show line no.s, unified diff style
-    let lStart = lineNo local
-    let rStart = lineNo remote
-    let lCount = length $ contents local
-    let rCount = length $ contents remote
+    let lStart = lineNo local  - length prev
+    let rStart = lineNo remote - length prev
+    let lCount = length (contents local)  + length prev + length after
+    let rCount = length (contents remote) + length prev + length after
     putStrLn border
     putStrLn . dull_cyan $ printf "@@ -%.2i,%i +%.2i,%i @@" lStart lCount rStart rCount
 
     -- Convert context lines to Items, so we don't need to treat them as a special case
-    let lines = (toBoth . appendNL <$> prev)
+    let sections = (toBoth . appendNL <$> prev)
                 ++ diff mode local remote
                 ++ (toBoth . appendNL <$> after)
 
+    -- Information for git-blame
+    -- TODO: only do this if we actually need it
+    -- TODO: cache this, instead of calling it each time we render the diff (this func gets called each time the user changes the diff mode)
+    lHash <- getLocalCommit
+    rHash <- getRemoteCommit
+    localMNote  <- gitBlame fname lHash lStart lCount
+    remoteMNote <- gitBlame fname rHash rStart rCount
+
     -- Determine what (if anything) to display in the left margin of the diff.
-    -- Each element is a list of lines to display for a given line of diff.
     -- TODO: add support for rendering blames
     let margin = case mode of
-                    Raw -> return . colourItemChar <$> lines
-                    _   -> replicate (length lines) []
+                    -- For raw mode, we know that sections map to lines, so this is safe
+                    Raw  -> return . colourItemChar <$> sections
+                    Line -> return <$> muxBlames sections localMNote remoteMNote
+                    _    -> replicate (length sections) []
 
-    mapM_ putStr $ pairMargin margin (renderDiff <$> lines)
+    mapM_ putStr $ pairMargin margin (renderDiff <$> sections)
 
     putStrLn border
     return ()
@@ -151,6 +161,19 @@ renderDiff :: Item String -> String
 renderDiff (Old x) = dull_red x
 renderDiff (New x) = dull_green x
 renderDiff (Both x _) = x
+
+-- Selects an appropriate BlameInfo for each conflict item, and renders it
+-- FIXME: assumes that each item is a line
+muxBlames :: [Item String] -> [BlameInfo] -> [BlameInfo] -> [String]
+-- muxBlames is ls rs = error $ "muxBlames: " ++ show (is, ls, rs)
+muxBlames ((Both _ _):is) (l0:ls) (_:rs) = renderBlame l0 : muxBlames is ls rs
+muxBlames ((Old _):is) (l0:ls) rs = dull_red   (renderBlame l0) : muxBlames is ls rs
+muxBlames ((New _):is) ls (r0:rs) = dull_green (renderBlame r0) : muxBlames is ls rs
+muxBlames [] [] [] = []
+
+-- FIXME: ask git what the correct length to use here is
+renderBlame :: BlameInfo -> String
+renderBlame info = take 6 $ commit info
 
 -- Handle a user input. Returns Just x if a hunk has been resolved, otherwise Nothing.
 handleCmd :: PromptOption -> DiffSection -> IO CmdOutcome
