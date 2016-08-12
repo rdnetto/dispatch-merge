@@ -1,5 +1,7 @@
 module Util where
 
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
 import Control.Monad (replicateM_)
 import System.Console.ANSI
 import System.Console.Terminal.Size (size, height)
@@ -76,4 +78,8 @@ mapBoth f g (xs, ys) = (f <$> xs, g <$> ys)
 
 appendNL :: String -> String
 appendNL = (++ " \n")
+
+-- Remove trailing whitespace
+rstrip :: String -> String
+rstrip = dropWhileEnd isSpace
 

@@ -56,21 +56,22 @@ getGitConflicts = do
         ExitSuccess -> Just stats
         _           -> Nothing
 
--- Returns the path to the .git directory, based on the current working directory
+-- Returns the path to the .git directory, based on the current working directory.
+-- (Need init to remove trailing newline)
 gitDir :: IO FilePath
-gitDir = readProcess "git" ["rev-parse", "--git-dir"] ""
+gitDir = rstrip <$> readProcess "git" ["rev-parse", "--git-dir"] ""
 
 -- Returns the commit from the local branch. Throws exception on failure.
 -- TODO: fix error handling
 getLocalCommit :: IO CommitHash
-getLocalCommit = do
+getLocalCommit = rstrip <$> do
     d <- gitDir
     readFile $ d </> "ORIG_HEAD"
 
 -- Returns the commit from the remote branch. Throws exception on failure.
 -- TODO: fix error handling
 getRemoteCommit :: IO CommitHash
-getRemoteCommit = do
+getRemoteCommit = rstrip <$> do
     d <- gitDir
     readFile $ d </> "MERGE_HEAD"
 
