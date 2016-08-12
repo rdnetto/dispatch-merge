@@ -2,6 +2,7 @@ module ResolveModified where
 
 import Data.Algorithm.Patience hiding (diff)
 import Data.Char (isPrint, toUpper)
+import Data.List (find)
 import Data.Maybe (fromMaybe, fromJust)
 import Control.Monad
 import Control.Monad.Loops (untilJust)
@@ -194,7 +195,7 @@ pairMargin :: [[String]] -> [String] -> [String]
 pairMargin margins diffLines = res where
     -- Compute max length for margin, capped at a reasonable value
     -- TODO: cap should be user configurable
-    marginMaxLength = maximumDef 0 . concat $ map2 (length . filter isPrint) margins
+    marginMaxLength = maximumDef 0 . concat $ map2 (length . stripAnsi) margins
     marginWidth = min marginMaxLength 20
 
     -- Match margin notes to diff lines
@@ -220,22 +221,15 @@ pairMargin margins diffLines = res where
                 then line
                 else ' ' : line
 
+    -- Truncates/pads the string to marginWidth length, ignoring ANSI escape codes.
     padMargin :: String -> String
-    padMargin = rpad marginWidth ' ' isPrint
+    padMargin s = res where
+        stripLength x = length $ stripAnsi x
+        f x = stripLength x <= marginWidth
 
--- Right pads a list to the desired length, using the specified padding element. Does not count elements which fail pred.
-rpad :: Int -> a -> (a -> Bool) -> [a] -> [a]
-rpad n p f xs = takeWhere f n (xs ++ repeat p)
-
--- Returns the longest possible prefix of xs that contains n elements which satisfy f.
--- Elements which do not satisfy f are included, but not counted.
-takeWhere :: (a -> Bool) -> Int -> [a] -> [a]
-takeWhere _ _ [] = []
-takeWhere f 0 (x0:xs) | f x0      = []
-                      | otherwise = x0 : takeWhere f 0  xs
-takeWhere f n (x0:xs) | f x0      = x0 : takeWhere f n' xs
-                      | otherwise = x0 : takeWhere f n  xs
-                      where n' = n - 1
+        res = if   stripLength s < marginWidth
+              then s ++ replicate (marginWidth - stripLength s) ' '
+              else fromJust . find f $ prefixes s
 
 -- Like DAP.itemChar, but with ANSI colouring
 colourItemChar :: Item a -> String

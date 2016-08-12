@@ -83,3 +83,13 @@ appendNL = (++ " \n")
 rstrip :: String -> String
 rstrip = dropWhileEnd isSpace
 
+-- Removes the ANSI escape codes from a String.
+stripAnsi :: String -> String
+stripAnsi ('\ESC':'[':s) = stripAnsi . tail $ dropWhile (/= 'm') s
+stripAnsi (s0:ss) = s0 : stripAnsi ss
+stripAnsi "" = ""
+
+-- Returns the prefixes of xs, in descending order of length. Includes [].
+prefixes :: [a] -> [[a]]
+prefixes xs = (flip take $ xs) <$> reverse [0 .. length xs]
+
