@@ -1,5 +1,5 @@
 name:                dispatch-merge
-version:             1.0.0.0
+version:             1.1.0.0
 synopsis:            Command-line tool for resolving merge conflicts.
 description:         Please see README.md
 homepage:            https://bitbucket.org/rdnetto/dispatch-merge
