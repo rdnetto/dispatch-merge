@@ -1,6 +1,6 @@
 module ResolveModified where
 
-import Data.Algorithm.Patience hiding (diff)
+import Patience hiding (diff)
 import Data.Char (toUpper)
 import Data.List (find)
 import Data.Maybe (fromMaybe, fromJust)

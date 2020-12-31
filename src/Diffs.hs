@@ -1,10 +1,9 @@
 -- This module contains logic for diffing and merging hunks
 module Diffs(DiffMode(..), SimpleRes(..), diff, resolveHunk, diffScores, selectMode) where
 
-import qualified Data.Algorithm.Patience as DAP
-import Data.Algorithm.Patience hiding (diff)
 import Data.Char (isSpace, isSymbol)
-import Data.Monoid
+import Patience hiding (diff)
+import qualified Patience as P
 
 import DiffParser
 import Util (appendNL)
@@ -26,17 +25,17 @@ diff Word l r = wordDiff l r
 diff Char l r = sCharDiff l r
 
 lineDiff :: Hunk -> Hunk -> [Item String]
-lineDiff l r = DAP.diff (f l) (f r) where
+lineDiff l r = P.diff (f l) (f r) where
     f = map appendNL . contents
 
 wordDiff :: Hunk -> Hunk -> [Item String]
-wordDiff l r = DAP.diff (f l) (f r) where
+wordDiff l r = P.diff (f l) (f r) where
     f = (breakWords =<<) . map appendNL . contents
     breakWords = safeBreak sep
     sep x = isSpace x || isSymbol x
 
 charDiff :: Hunk -> Hunk -> [Item Char]
-charDiff l r = DAP.diff (f l) (f r) where
+charDiff l r = P.diff (f l) (f r) where
     f = (id =<<) . map appendNL . contents
 
 sCharDiff :: Hunk -> Hunk -> [Item String]
@@ -105,5 +104,10 @@ coalesce (a1:a2:as)
         fuse (Old x) (Old y) = Old (x <> y)
         fuse (New x) (New y) = New (x <> y)
         fuse (Both x1 x2) (Both y1 y2) = Both (x1 <> y1) (x2 <> y2)
+
+        itemChar (Old  _  ) = '-'
+        itemChar (New  _  ) = '+'
+        itemChar (Both _ _) = ' '
+
 coalesce x = x
 
